@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProyectWeb — Tienda online de tecnología</title>
+  <meta name="description" content="ProyectWeb: tienda online de tecnología. Auriculares, teclados, monitores, ratones, webcams y más. Envíos en México. Precios en pesos mexicanos.">
+  <!-- Tailwind CSS: CDN oficial en el head (diseño responsivo Mobile First) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Estilos propios: se cargan después de Tailwind para poder sobrescribir -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- FontAwesome CDN: iconos (carrito, redes, menú) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-outfit antialiased bg-slate-50 text-slate-800">
+  <!-- Navbar sticky: Mobile First (menú hamburguesa en móvil, enlaces en md+) -->
+  <header class="header sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
+    <nav class="container mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+      <a href="#inicio" class="text-lg sm:text-xl font-semibold text-slate-800 hover:text-indigo-600 transition">ProyectWeb</a>
+      <ul class="hidden md:flex items-center gap-6 lg:gap-8">
+        <li><a href="#inicio" class="nav-link">Inicio</a></li>
+        <li><a href="#catalogo" class="nav-link">Catálogo</a></li>
+        <li><a href="#nosotros" class="nav-link">Nosotros</a></li>
+        <li><a href="#contacto" class="nav-link">Contacto</a></li>
+      </ul>
+      <div class="flex items-center gap-3">
+        <button type="button" id="btn-login" class="btn btn-primary btn-sm hidden md:inline-flex" aria-label="Iniciar sesión">Login</button>
+        <span id="nav-hola-cliente" class="auth-hidden md:inline-flex items-center gap-2">
+          <span class="text-slate-600 text-sm font-medium">Hola, Cliente</span>
+          <button type="button" id="btn-logout" class="text-slate-500 hover:text-red-600 text-xs">Salir</button>
+        </span>
+        <button type="button" id="btn-cart" class="relative p-2 rounded-lg hover:bg-slate-100 transition" aria-label="Carrito">
+          <i class="fa-solid fa-cart-shopping text-slate-700 text-xl"></i>
+          <span id="cart-count" class="badge-cart absolute -top-1 -right-1">0</span>
+        </button>
+      </div>
+      <button type="button" id="menu-toggle" class="md:hidden p-2 rounded-lg hover:bg-slate-100" aria-label="Menú">
+        <i class="fa-solid fa-bars text-xl text-slate-700"></i>
+      </button>
+    </nav>
+    <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-4 py-3">
+      <a href="#inicio" class="block py-2 text-slate-700 hover:text-indigo-600">Inicio</a>
+      <a href="#catalogo" class="block py-2 text-slate-700 hover:text-indigo-600">Catálogo</a>
+      <a href="#nosotros" class="block py-2 text-slate-700 hover:text-indigo-600">Nosotros</a>
+      <a href="#contacto" class="block py-2 text-slate-700 hover:text-indigo-600">Contacto</a>
+      <button type="button" id="btn-login-mobile" class="block w-full text-left py-2 text-slate-700 hover:text-indigo-600 auth-visible">Login</button>
+      <div class="auth-hidden pt-2" id="nav-hola-cliente-mobile"><span class="text-slate-600 font-medium">Hola, Cliente</span> <button type="button" id="btn-logout-mobile" class="text-red-600 text-sm ml-2">Salir</button></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Sección Inicio: espaciado y tipografía responsivos (base = móvil) -->
+    <section id="inicio" class="hero-section py-12 sm:py-16 md:py-24 lg:py-28 scroll-mt-16">
+      <div class="container mx-auto px-4 sm:px-6 text-center">
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-3 sm:mb-4">Bienvenido a ProyectWeb</h1>
+        <p class="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-6 sm:mb-8 px-1">Tu tienda online con los mejores productos. Navega por el catálogo, añade al carrito y compra de forma segura.</p>
+        <div class="flex flex-wrap justify-center gap-4">
+          <a href="#catalogo" class="btn btn-primary">Ver catálogo</a>
+          <a href="#contacto" class="btn btn-secondary">Contactar</a>
+        </div>
+        <!-- Vista de Cliente (solo cuando hay sesión) -->
+        <div id="vista-cliente" class="hidden mt-12 max-w-2xl mx-auto text-left">
+          <div class="p-6 bg-indigo-50 border border-indigo-200 rounded-2xl mb-6">
+            <h2 class="text-xl font-semibold text-indigo-900 mb-2">Vista de Cliente</h2>
+            <p class="text-indigo-800">Gracias por iniciar sesión. Como cliente registrado tienes acceso a ofertas exclusivas y seguimiento de pedidos. ¡Disfruta de la compra!</p>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-slate-900 mb-4"><i class="fa-solid fa-receipt mr-2 text-indigo-600"></i>Mis pedidos</h3>
+            <div id="mis-pedidos-list" class="space-y-3"></div>
+            <p id="mis-pedidos-empty" class="text-slate-500 text-sm py-4">Aún no tienes pedidos.</p>
+            <p id="mis-pedidos-loading" class="hidden text-slate-500 text-sm py-4">Cargando...</p>
+          </div>
+        </div>
+        <!-- Vista de Administrador (solo cuando hay sesión de admin) -->
+        <div id="vista-admin" class="hidden mt-12 max-w-6xl mx-auto">
+          <div class="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-2xl font-semibold text-purple-900">
+                <i class="fa-solid fa-shield-halved mr-2"></i>Panel de Administrador
+              </h2>
+              <span class="px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">Admin</span>
+            </div>
+            <p class="text-purple-800">Bienvenido al panel de administración. Gestiona productos, visualiza estadísticas y administra tu tienda.</p>
+          </div>
+
+          <!-- Estadísticas rápidas -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-slate-600">Total Productos</p>
+                  <p id="admin-total-productos" class="text-2xl font-bold text-slate-900">0</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <i class="fa-solid fa-box text-blue-600 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-slate-600">En Carrito</p>
+                  <p id="admin-items-carrito" class="text-2xl font-bold text-slate-900">0</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <i class="fa-solid fa-cart-shopping text-green-600 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-slate-600">Valor Total</p>
+                  <p id="admin-valor-total" class="text-2xl font-bold text-slate-900">$0.00 MXN</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <i class="fa-solid fa-dollar-sign text-yellow-600 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-slate-600">Usuarios</p>
+                  <p id="admin-usuarios-activos" class="text-2xl font-bold text-slate-900">—</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <i class="fa-solid fa-users text-purple-600 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm text-slate-600">Ventas totales</p>
+                  <p id="admin-ventas-totales" class="text-2xl font-bold text-slate-900">$0 MXN</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <i class="fa-solid fa-chart-line text-emerald-600 text-xl"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gestión de Productos -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold text-slate-900">
+                <i class="fa-solid fa-list mr-2 text-indigo-600"></i>Gestión de Productos
+              </h3>
+              <button type="button" id="btn-agregar-producto" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus mr-1"></i>Nuevo Producto
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">ID</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Nombre</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Precio</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Stock</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-tabla-productos" class="divide-y divide-slate-200">
+                  <!-- Rellenado por JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Gestión de Usuarios -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold text-slate-900">
+                <i class="fa-solid fa-users mr-2 text-purple-600"></i>Gestión de Usuarios
+              </h3>
+              <button type="button" id="btn-nuevo-usuario" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus mr-1"></i>Nuevo usuario
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Nombre</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Rol</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Estado</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-tabla-usuarios" class="divide-y divide-slate-200">
+                  <!-- Rellenado por JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pedidos recientes -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+            <h3 class="text-xl font-semibold text-slate-900 mb-4">
+              <i class="fa-solid fa-receipt mr-2 text-green-600"></i>Pedidos recientes
+            </h3>
+            <div id="admin-pedidos-list" class="space-y-3 max-h-64 overflow-y-auto">
+              <!-- Rellenado por JavaScript -->
+            </div>
+            <p id="admin-pedidos-empty" class="hidden text-slate-500 text-sm py-4">Aún no hay pedidos.</p>
+          </div>
+
+          <!-- Acciones rápidas -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h3 class="text-xl font-semibold text-slate-900 mb-4">
+              <i class="fa-solid fa-bolt mr-2 text-yellow-600"></i>Acciones Rápidas
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <button type="button" id="btn-limpiar-carrito" class="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-left">
+                <i class="fa-solid fa-trash text-red-600 mb-2"></i>
+                <p class="font-medium text-slate-900">Limpiar Carrito</p>
+                <p class="text-sm text-slate-600">Vaciar todos los productos del carrito</p>
+              </button>
+              <button type="button" id="btn-exportar-datos" class="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-left">
+                <i class="fa-solid fa-download text-blue-600 mb-2"></i>
+                <p class="font-medium text-slate-900">Exportar Datos</p>
+                <p class="text-sm text-slate-600">Descargar datos en JSON</p>
+              </button>
+              <button type="button" id="btn-reset-productos" class="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-left">
+                <i class="fa-solid fa-rotate-right text-green-600 mb-2"></i>
+                <p class="font-medium text-slate-900">Resetear Productos</p>
+                <p class="text-sm text-slate-600">Restaurar catálogo original</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Catálogo: grid Mobile First (1 col móvil → 2 sm → 3 lg) -->
+    <section id="catalogo" class="py-10 sm:py-14 md:py-16 lg:py-20 bg-white scroll-mt-16">
+      <div class="container mx-auto px-4 sm:px-6">
+        <h2 class="text-xl sm:text-2xl md:text-3xl font-semibold text-slate-900 mb-6 sm:mb-8 text-center">Catálogo de productos</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" id="catalog-grid">
+          <!-- Rellenado por script.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Nosotros: Quiénes somos (text-justify) + Ubicación (iframe Maps) -->
+    <section id="nosotros" class="py-10 sm:py-14 md:py-20 bg-slate-50 scroll-mt-16">
+      <div class="container mx-auto px-4 sm:px-6">
+        <h2 class="text-xl sm:text-2xl md:text-3xl font-semibold text-slate-900 mb-6 sm:mb-8 text-center">Quiénes somos</h2>
+        <div class="max-w-3xl mx-auto text-slate-700 text-justify mb-8 sm:mb-12 text-sm sm:text-base">
+          <p class="mb-4">ProyectWeb nació con la idea de ofrecer productos de calidad a través de una experiencia de compra sencilla y segura. Somos un equipo comprometido con el servicio al cliente y la satisfacción de quienes confían en nosotros.</p>
+          <p class="mb-4">Nuestra misión es conectar productos con personas, facilitando el acceso a tecnología y accesorios que mejoran el día a día. Trabajamos con proveedores verificados y garantizamos envíos rápidos a toda la península.</p>
+          <p>Si tienes dudas, estamos en la sección de contacto para ayudarte. ¡Gracias por visitarnos!</p>
+        </div>
+        <h3 class="text-xl font-semibold text-slate-900 mb-4 text-center">Ubicación</h3>
+        <div class="rounded-lg sm:rounded-xl overflow-hidden border border-slate-200 shadow-sm max-w-4xl mx-auto aspect-video bg-slate-200 w-full">
+          <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3037.497237371635!2d-3.703790323733987!3d40.416775371352!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd42287e239f2c1d%3A0x8e0b1b2b3c4d5e6f!2sPuerta%20del%20Sol%2C%20Madrid!5e0!3m2!1ses!2ses!4v1708000000000!5m2!1ses!2ses" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de ubicación"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contacto: formulario responsivo -->
+    <section id="contacto" class="py-10 sm:py-14 md:py-20 bg-white scroll-mt-16">
+      <div class="container mx-auto px-4 sm:px-6 max-w-xl">
+        <h2 class="text-xl sm:text-2xl md:text-3xl font-semibold text-slate-900 mb-6 sm:mb-8 text-center">Contáctanos</h2>
+        <form id="contact-form" class="space-y-4">
+          <div>
+            <label for="contact-name" class="label-field">Nombre</label>
+            <input type="text" id="contact-name" name="nombre" class="input-field" placeholder="Tu nombre" required>
+          </div>
+          <div>
+            <label for="contact-email" class="label-field">Email</label>
+            <input type="email" id="contact-email" name="email" class="input-field" placeholder="tu@email.com" required>
+          </div>
+          <div>
+            <label for="contact-message" class="label-field">Mensaje</label>
+            <textarea id="contact-message" name="mensaje" class="input-field min-h-[120px] resize-y" placeholder="Escribe tu mensaje..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary w-full">Enviar mensaje</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer con redes sociales -->
+  <footer class="footer-section py-10 bg-slate-900 text-slate-300">
+    <div class="container mx-auto px-4 text-center">
+      <p class="text-sm mb-4">© 2025 ProyectWeb. Proyecto multi-página HTML5 + Tailwind + JS.</p>
+      <nav class="flex justify-center gap-6 text-sm mb-4">
+        <a href="#inicio" class="hover:text-white transition">Inicio</a>
+        <a href="#catalogo" class="hover:text-white transition">Catálogo</a>
+        <a href="#nosotros" class="hover:text-white transition">Nosotros</a>
+        <a href="#contacto" class="hover:text-white transition">Contacto</a>
+      </nav>
+      <div class="flex justify-center gap-4 text-xl">
+        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal Login -->
+  <div id="login-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-labelledby="login-modal-title">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="login-modal-title" class="text-xl font-semibold text-slate-900">Iniciar sesión</h2>
+        <button type="button" id="login-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <form id="login-form">
+        <div class="mb-4">
+          <label for="login-user" class="label-field">Usuario o correo</label>
+          <input type="text" id="login-user" name="usuario" class="input-field" placeholder="admin o tu@email.com" required>
+          <p class="text-xs text-slate-500 mt-1">Admin: usuario "admin". Clientes: tu correo electrónico.</p>
+        </div>
+        <div class="mb-6">
+          <label for="login-password" class="label-field">Contraseña</label>
+          <input type="password" id="login-password" name="password" class="input-field" placeholder="Contraseña" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Entrar</button>
+        <p class="text-center text-sm text-slate-600 mt-4">¿No tienes cuenta? <button type="button" id="btn-open-register" class="text-indigo-600 font-medium hover:underline">Registrarse</button></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Registro -->
+  <div id="register-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-labelledby="register-modal-title">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="register-modal-title" class="text-xl font-semibold text-slate-900">Crear cuenta</h2>
+        <button type="button" id="register-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <form id="register-form">
+        <div class="mb-4">
+          <label for="register-name" class="label-field">Nombre</label>
+          <input type="text" id="register-name" name="nombre" class="input-field" placeholder="Tu nombre" required>
+        </div>
+        <div class="mb-4">
+          <label for="register-email" class="label-field">Correo electrónico</label>
+          <input type="email" id="register-email" name="email" class="input-field" placeholder="tu@email.com" required>
+        </div>
+        <div class="mb-6">
+          <label for="register-password" class="label-field">Contraseña (mín. 6 caracteres)</label>
+          <input type="password" id="register-password" name="password" class="input-field" minlength="6" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Registrarme</button>
+        <p class="text-center text-sm text-slate-600 mt-4">¿Ya tienes cuenta? <button type="button" id="btn-open-login" class="text-indigo-600 font-medium hover:underline">Iniciar sesión</button></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Agregar/Editar Producto (Admin) -->
+  <div id="product-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box max-w-2xl" role="dialog" aria-labelledby="product-modal-title">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="product-modal-title" class="text-xl font-semibold text-slate-900">Nuevo Producto</h2>
+        <button type="button" id="product-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <form id="product-form">
+        <input type="hidden" id="product-id" name="id">
+        <div class="modal-content">
+        <div class="mb-4">
+          <label for="product-name" class="label-field">Nombre del Producto</label>
+          <input type="text" id="product-name" name="name" class="input-field" placeholder="Ej: Auriculares inalámbricos" required>
+        </div>
+        <div class="mb-4">
+          <label for="product-price" class="label-field">Precio ($ MXN)</label>
+          <input type="number" id="product-price" name="price" class="input-field" step="0.01" min="0" placeholder="49.99" required>
+        </div>
+        <div class="mb-4">
+          <label for="product-stock" class="label-field">Stock (unidades)</label>
+          <input type="number" id="product-stock" name="stock" class="input-field" min="0" step="1" placeholder="10" required>
+        </div>
+        <div class="mb-4">
+          <label for="product-description" class="label-field">Descripción</label>
+          <textarea id="product-description" name="description" class="input-field min-h-[100px] resize-y" placeholder="Descripción del producto..." required></textarea>
+        </div>
+        <div class="mb-4">
+          <label for="product-image" class="label-field">Imagen del producto</label>
+          <div class="space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+              <input type="file" id="product-image-file" accept="image/*" class="hidden">
+              <label for="product-image-file" class="btn btn-primary product-image-upload-btn cursor-pointer order-first sm:order-none">
+                <i class="fa-solid fa-upload mr-2"></i>Subir imagen
+              </label>
+              <p class="text-xs text-slate-500 sm:mt-0">Arrastra o selecciona. JPG, PNG o WebP. Máx. 3 MB.</p>
+            </div>
+            <div>
+              <label for="product-image" class="text-xs font-medium text-slate-600 block mb-1">O pegar URL (opcional)</label>
+              <input type="url" id="product-image" name="image" class="input-field" placeholder="https://...">
+            </div>
+          </div>
+          <div id="product-image-preview" class="mt-3 hidden product-image-preview-box">
+            <img id="product-image-preview-img" src="" alt="Vista previa" class="product-image-preview-img">
+          </div>
+        </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary flex-1">Guardar</button>
+          <button type="button" id="product-modal-cancel" class="btn btn-secondary">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Usuario (Admin: crear/editar) -->
+  <div id="user-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box max-w-md" role="dialog" aria-labelledby="user-modal-title">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="user-modal-title" class="text-xl font-semibold text-slate-900">Nuevo usuario</h2>
+        <button type="button" id="user-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <form id="user-form">
+        <input type="hidden" id="user-id" name="id">
+        <div class="mb-4">
+          <label for="user-email" class="label-field">Email</label>
+          <input type="email" id="user-email" name="email" class="input-field" placeholder="usuario@email.com" required>
+        </div>
+        <div class="mb-4" id="user-password-wrap">
+          <label for="user-password" class="label-field">Contraseña (mín. 6)</label>
+          <input type="password" id="user-password" name="password" class="input-field" minlength="6" placeholder="••••••••">
+        </div>
+        <div class="mb-4">
+          <label for="user-name" class="label-field">Nombre</label>
+          <input type="text" id="user-name" name="name" class="input-field" placeholder="Nombre completo" required>
+        </div>
+        <div class="mb-4">
+          <label for="user-role" class="label-field">Rol</label>
+          <select id="user-role" name="role" class="input-field">
+            <option value="CLIENT">Cliente</option>
+            <option value="ADMIN">Administrador</option>
+          </select>
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" id="user-modal-cancel" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Pedido (Admin) -->
+  <div id="order-detail-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box max-w-lg" role="dialog" aria-labelledby="order-detail-title">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="order-detail-title" class="text-xl font-semibold text-slate-900">Detalle del pedido</h2>
+        <button type="button" id="order-detail-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div id="order-detail-content" class="text-sm text-slate-700 space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- Drawer Carrito -->
+  <div id="cart-drawer-overlay" class="drawer-overlay hidden" aria-hidden="true"></div>
+  <aside id="cart-drawer" class="cart-drawer" aria-label="Carrito de compras">
+    <div class="cart-drawer-header">
+      <h2 class="text-lg font-semibold text-slate-900">Carrito</h2>
+      <button type="button" id="cart-drawer-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar carrito"><i class="fa-solid fa-times"></i></button>
+    </div>
+    <div id="cart-drawer-list" class="cart-drawer-list">
+      <!-- Lista de productos por JS -->
+    </div>
+    <div class="cart-drawer-footer">
+      <p class="flex justify-between text-slate-700 mb-4"><span>Subtotal</span><span id="cart-drawer-subtotal">$0.00 MXN</span></p>
+      <button type="button" id="cart-drawer-checkout" class="btn btn-primary w-full">Finalizar compra</button>
+      <button type="button" id="btn-pay-mp" class="btn btn-secondary w-full mt-2 hidden" aria-label="Pagar con Mercado Pago">
+        Pagar con Mercado Pago
+      </button>
+      <p id="cart-drawer-mp-legend" class="hidden text-xs text-slate-500 mt-1 text-center">Serás redirigido a Mercado Pago</p>
+    </div>
+  </aside>
+
+  <!-- Modal Checkout: datos de envío y confirmación -->
+  <div id="checkout-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box max-w-lg" role="dialog" aria-labelledby="checkout-modal-title">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="checkout-modal-title" class="text-xl font-semibold text-slate-900">Finalizar compra</h2>
+        <button type="button" id="checkout-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div id="checkout-summary" class="mb-4 p-4 bg-slate-50 rounded-lg text-sm text-slate-700"></div>
+      <p id="checkout-payment-badge" class="hidden mb-3 text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-2 rounded">Método de pago: Mercado Pago</p>
+      <form id="checkout-form">
+        <div class="mb-3">
+          <label for="checkout-name" class="label-field">Nombre completo</label>
+          <input type="text" id="checkout-name" name="nombre" class="input-field" placeholder="Tu nombre" required>
+        </div>
+        <div class="mb-3">
+          <label for="checkout-email" class="label-field">Correo electrónico</label>
+          <input type="email" id="checkout-email" name="email" class="input-field" placeholder="tu@email.com" required>
+        </div>
+        <div class="mb-3">
+          <label for="checkout-phone" class="label-field">Teléfono</label>
+          <input type="tel" id="checkout-phone" name="telefono" class="input-field" placeholder="55 1234 5678" required>
+        </div>
+        <div class="mb-4">
+          <label for="checkout-address" class="label-field">Dirección de envío</label>
+          <textarea id="checkout-address" name="direccion" class="input-field min-h-[80px] resize-y" placeholder="Calle, número, colonia, CP, ciudad..." required></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button type="submit" id="checkout-form-submit" class="btn btn-primary flex-1">Confirmar pedido</button>
+          <button type="button" id="checkout-modal-cancel" class="btn btn-secondary">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal compra exitosa -->
+  <div id="purchase-success-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box max-w-sm text-center" role="dialog" aria-labelledby="purchase-success-title">
+      <p id="purchase-success-title" class="text-2xl font-semibold text-slate-900 mb-2">✅ Compra realizada</p>
+      <p id="purchase-success-demo-banner" class="hidden text-amber-600 font-medium text-sm mb-2">MODO DEMO</p>
+      <p class="text-slate-600 mb-1">Pedido: <strong id="purchase-success-order-id">—</strong></p>
+      <p class="text-slate-600 mb-1">Total: <strong id="purchase-success-total" class="text-indigo-600">—</strong></p>
+      <div id="purchase-success-items" class="hidden text-slate-600 text-sm text-left mb-4 max-h-24 overflow-y-auto"></div>
+      <div class="flex gap-3 justify-center">
+        <a href="#catalogo" id="purchase-success-btn-catalog" class="btn btn-primary">Ver catálogo</a>
+        <button type="button" id="purchase-success-btn-close" class="btn btn-secondary">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensaje de resultado de pago (Mercado Pago / PayPal) -->
+  <div id="payment-result" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full text-center shadow-xl">
+      <p id="payment-result-text" class="text-slate-700 mb-4"></p>
+      <button type="button" id="payment-result-close" class="btn btn-primary">Entendido</button>
+    </div>
+  </div>
+
+  <script src="./api.js"></script>
+  <script src="./script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      App.init();
+    });
+  </script>
+</body>
+</html>

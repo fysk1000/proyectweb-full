@@ -1,0 +1,614 @@
+{
+  "users": [
+    {
+      "id": "E2U_EzHDfl3tozUQsfaLC",
+      "email": "admin@proyectweb.local",
+      "name": "Admin",
+      "password_hash": "$2a$10$10E1jKaxydzyJnD//7P1aepjPqEg7c/8OOV0G38IqJ2edU1a1yDre",
+      "role": "ADMIN",
+      "created_at": "2026-02-26T05:45:51.724Z"
+    },
+    {
+      "id": "KcNLnPF3LBohk7rOfLcT6",
+      "email": "ALEJANDROFYS01@GMAIL.COM",
+      "name": "ALEJANDRO",
+      "password_hash": "$2a$10$/oHWNyrv3i.h5TQX1YF8uewSo2Yyd9a6RSDxYf4MxGfCOXL1lpE1m",
+      "role": "CLIENT",
+      "created_at": "2026-02-26T10:28:02.610Z"
+    },
+    {
+      "id": "uUo5qunh4hurmUBAvvnnd",
+      "email": "11@gmail.com",
+      "name": "Alejandro",
+      "password_hash": "$2a$10$nKMClVaKNz0sp05mPmh40.Z5O1R7nQYtIeWI6aItw.mWkLzeKECiS",
+      "role": "CLIENT",
+      "created_at": "2026-02-26T10:52:49.997Z"
+    },
+    {
+      "id": "lYuTC_JSJOdoXVps-vsqy",
+      "email": "l221080472@iztapalapa.tecnm.mx",
+      "name": "JOSUE",
+      "password_hash": "$2a$10$Ft1mwHxwg9W5cJxmP2U34udekASOBy9oByqO.Wxz7SFYEcdC.yIqa",
+      "role": "CLIENT",
+      "created_at": "2026-02-26T11:18:15.431Z"
+    },
+    {
+      "id": "Ffdi8SpXQ7_JdJg8FRlQD",
+      "email": "ana@gmail.com",
+      "name": "Ana",
+      "password_hash": "$2a$10$j7sqfplSx0XqBjmFwhmAieBgmBfTxy2zAsP1g5wxXlSsuq.UT6gA.",
+      "role": "CLIENT",
+      "created_at": "2026-02-26T18:29:08.685Z"
+    },
+    {
+      "id": "00gMIWuZga_FOiddnUYo-",
+      "email": "alexito@gmail.com",
+      "name": "alejandro",
+      "password_hash": "$2a$10$EPj3JM8b/uJS2GnmxGWw2O.3YuNENmK.khL3jcrZdT0gOA.nuxsf2",
+      "role": "CLIENT",
+      "active": true,
+      "created_at": "2026-03-07T20:35:58.290Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "dOKBeVGZ1gSZ1Bg1gH_Pu",
+      "name": "Auriculares inalámbricos",
+      "description": "Sonido envolvente y cancelación de ruido. Hasta 20h de batería.",
+      "price_cents": 4999,
+      "stock": 10,
+      "image_url": "http://localhost:5050/uploads/1772097593559-v3kwCIDx.jpg",
+      "active": true,
+      "created_at": "2026-02-26T05:45:51.729Z",
+      "updated_at": "2026-02-26T09:19:53.576Z"
+    },
+    {
+      "id": "L_4xyy9aqz3pLNRt4AVQJ",
+      "name": "Teclado mecánico RGB",
+      "description": "Switches mecánicos, retroiluminación RGB y reposamuñecas magnético.",
+      "price_cents": 8999,
+      "stock": 8,
+      "image_url": "https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=400&h=300&fit=crop",
+      "active": true,
+      "created_at": "2026-02-26T05:45:51.729Z",
+      "updated_at": "2026-02-26T05:45:51.729Z"
+    },
+    {
+      "id": "fgf1EyUdsTO2g0y0sLyTm",
+      "name": "iPhone 17 Pro Max Naranja Cosmico",
+      "description": "iPhone 17 Pro Max de 256 gb nuevo y sellado",
+      "price_cents": 4899999,
+      "stock": 9,
+      "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg",
+      "active": true,
+      "created_at": "2026-02-26T09:06:30.210Z",
+      "updated_at": "2026-02-26T09:18:59.406Z"
+    },
+    {
+      "id": "p6wP8lGdYv8DOdv-5B2fH",
+      "name": "Xbox Series X",
+      "description": "Xbox Series X nuevo y sellado de 1TB sin juegos",
+      "price_cents": 999999,
+      "stock": 10,
+      "image_url": "http://localhost:5050/uploads/1772099352963-LB1z6Cmw.jpg",
+      "active": true,
+      "created_at": "2026-02-26T09:49:12.983Z",
+      "updated_at": "2026-02-26T09:49:12.983Z"
+    },
+    {
+      "id": "-9Jtc9zo680igpR4ROBdG",
+      "name": "Playstation 5",
+      "description": "playstation 5 nueva y sellada de 1tb",
+      "price_cents": 899999,
+      "stock": 10,
+      "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg",
+      "active": true,
+      "created_at": "2026-02-26T10:06:11.142Z",
+      "updated_at": "2026-02-26T10:07:13.989Z"
+    },
+    {
+      "id": "ilXX7V_quDyNq21oTzn8m",
+      "name": "Pantalla Hisense 100 pulgadas",
+      "description": "pantalla hisense de 100 pulgadas nueva y sellada",
+      "price_cents": 1399999,
+      "stock": 5,
+      "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg",
+      "active": false,
+      "created_at": "2026-02-26T10:26:48.195Z",
+      "updated_at": "2026-02-26T18:34:42.129Z"
+    },
+    {
+      "id": "LRJYvDI4vNCRXz4G1WOq9",
+      "name": "pantalla led",
+      "description": "pantalla",
+      "price_cents": 2299900,
+      "stock": 10,
+      "image_url": "http://localhost:5050/uploads/1772127800301-mXzjxd77.jpg",
+      "active": false,
+      "created_at": "2026-02-26T17:43:20.333Z",
+      "updated_at": "2026-02-26T17:43:50.568Z"
+    },
+    {
+      "id": "qOaisjaMjJxIxuRLGZXEd",
+      "name": "pantalla led",
+      "description": "ppppppooooo",
+      "price_cents": 999900,
+      "stock": 1,
+      "image_url": "http://localhost:5050/uploads/1772130694911-gSZztND4.jpg",
+      "active": false,
+      "created_at": "2026-02-26T18:31:34.937Z",
+      "updated_at": "2026-02-26T18:34:13.907Z"
+    },
+    {
+      "id": "qrAMd3cKSTRCNaDDr6rOM",
+      "name": "MacBook Neo",
+      "description": "MacBook Neo Color Negro de 1TB",
+      "price_cents": 1499900,
+      "stock": 10,
+      "image_url": "http://localhost:5050/uploads/1772915725814-vnuljDSn.jpg",
+      "active": true,
+      "created_at": "2026-03-07T20:35:25.851Z",
+      "updated_at": "2026-03-07T20:35:25.851Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-NFIKYMFV_1",
+      "user_id": null,
+      "customer": {
+        "nombre": "ALEJANDRO",
+        "email": "alejandro@gmail.com",
+        "telefono": "551234567891",
+        "direccion": "calle 39, casa 999"
+      },
+      "items": [
+        {
+          "product_id": "fgf1EyUdsTO2g0y0sLyTm",
+          "name": "iPhone 17 Pro Max Naranja Cosmico",
+          "price_cents": 4899999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "calle 39, casa 999"
+      },
+      "total_cents": 4899999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T09:26:59.737Z",
+      "updated_at": "2026-02-26T09:26:59.737Z"
+    },
+    {
+      "id": "ORD-E4TOHQS3GF",
+      "user_id": null,
+      "customer": {
+        "nombre": "JOSUE",
+        "email": "l221080472@iztapalapa.tecnm.mx",
+        "telefono": "551234567891",
+        "direccion": "CALLE 1 CASA 8888"
+      },
+      "items": [
+        {
+          "product_id": "fgf1EyUdsTO2g0y0sLyTm",
+          "name": "iPhone 17 Pro Max Naranja Cosmico",
+          "price_cents": 4899999,
+          "qty": 2,
+          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "CALLE 1 CASA 8888"
+      },
+      "total_cents": 9799998,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T09:29:48.928Z",
+      "updated_at": "2026-02-26T09:29:48.928Z"
+    },
+    {
+      "id": "ORD-ZR-7YQZIO-",
+      "user_id": null,
+      "customer": {
+        "nombre": "JOSUE",
+        "email": "l221080472@iztapalapa.tecnm.mx",
+        "telefono": "551234567891",
+        "direccion": "CALLE 44"
+      },
+      "items": [
+        {
+          "product_id": "fgf1EyUdsTO2g0y0sLyTm",
+          "name": "iPhone 17 Pro Max Naranja Cosmico",
+          "price_cents": 4899999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "CALLE 44"
+      },
+      "total_cents": 4899999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T09:31:05.180Z",
+      "updated_at": "2026-02-26T09:31:05.180Z"
+    },
+    {
+      "id": "ORD-YWHZB-0F8F",
+      "user_id": null,
+      "customer": {
+        "nombre": "JOSUE",
+        "email": "l221080472@iztapalapa.tecnm.mx",
+        "telefono": "551234567891",
+        "direccion": "CALLE 1000"
+      },
+      "items": [
+        {
+          "product_id": "-9Jtc9zo680igpR4ROBdG",
+          "name": "Playstation 5",
+          "price_cents": 899999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "CALLE 1000"
+      },
+      "total_cents": 899999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T10:08:48.245Z",
+      "updated_at": "2026-02-26T10:08:48.245Z"
+    },
+    {
+      "id": "ORD-0JBUPOJXY8",
+      "user_id": null,
+      "customer": {
+        "nombre": "JOSUE",
+        "email": "l221080472@iztapalapa.tecnm.mx",
+        "telefono": "551234567891",
+        "direccion": "CALLE 10000"
+      },
+      "items": [
+        {
+          "product_id": "-9Jtc9zo680igpR4ROBdG",
+          "name": "Playstation 5",
+          "price_cents": 899999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "CALLE 10000"
+      },
+      "total_cents": 899999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T10:09:17.884Z",
+      "updated_at": "2026-02-26T10:09:17.884Z"
+    },
+    {
+      "id": "ORD-SS86O4VG-X",
+      "user_id": null,
+      "user_email": "ALEJANDROFYS01@GMAIL.COM",
+      "customer": {
+        "nombre": "ALEJANDRO",
+        "email": "ALEJANDROFYS01@GMAIL.COM",
+        "telefono": "55123456789122",
+        "direccion": "CALLE 222000"
+      },
+      "items": [
+        {
+          "product_id": "ilXX7V_quDyNq21oTzn8m",
+          "name": "Pantalla Hisense 100 pulgadas",
+          "price_cents": 1399999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "CALLE 222000"
+      },
+      "total_cents": 1399999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T10:28:35.927Z",
+      "updated_at": "2026-02-26T10:28:35.927Z"
+    },
+    {
+      "id": "ORD-T7JA6HJ-MI",
+      "user_id": null,
+      "user_email": "ALEJANDROFYS01@GMAIL.COM",
+      "customer": {
+        "nombre": "JOSUE",
+        "email": "ALEJANDROFYS01@GMAIL.COM",
+        "telefono": "551234567891",
+        "direccion": "calle 200 casa 44 donde sea"
+      },
+      "items": [
+        {
+          "product_id": "-9Jtc9zo680igpR4ROBdG",
+          "name": "Playstation 5",
+          "price_cents": 899999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "calle 200 casa 44 donde sea"
+      },
+      "total_cents": 899999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T10:50:47.861Z",
+      "updated_at": "2026-02-26T10:50:47.861Z"
+    },
+    {
+      "id": "ORD-HBSSJJXBLA",
+      "user_id": null,
+      "user_email": "l221080472@iztapalapa.tecnm.mx",
+      "customer": {
+        "nombre": "JOSUE",
+        "email": "l221080472@iztapalapa.tecnm.mx",
+        "telefono": "551234567891",
+        "direccion": "yyyyy"
+      },
+      "items": [
+        {
+          "product_id": "ilXX7V_quDyNq21oTzn8m",
+          "name": "Pantalla Hisense 100 pulgadas",
+          "price_cents": 1399999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "yyyyy"
+      },
+      "total_cents": 1399999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T10:51:48.192Z",
+      "updated_at": "2026-02-26T10:51:48.192Z"
+    },
+    {
+      "id": "ORD-1XA7BXC-E4",
+      "user_id": null,
+      "user_email": "11@gmail.com",
+      "customer": {
+        "nombre": "Alejandro",
+        "email": "11@gmail.com",
+        "telefono": "1122334455",
+        "direccion": "calle ocho"
+      },
+      "items": [
+        {
+          "product_id": "ilXX7V_quDyNq21oTzn8m",
+          "name": "Pantalla Hisense 100 pulgadas",
+          "price_cents": 1399999,
+          "qty": 2,
+          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "calle ocho"
+      },
+      "total_cents": 2799998,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T10:53:15.079Z",
+      "updated_at": "2026-02-26T10:53:15.079Z"
+    },
+    {
+      "id": "ORD-GRKLCHPJUP",
+      "user_id": "lYuTC_JSJOdoXVps-vsqy",
+      "user_email": "l221080472@iztapalapa.tecnm.mx",
+      "customer": {
+        "nombre": "JOSUE",
+        "email": "l221080472@iztapalapa.tecnm.mx",
+        "telefono": "551234567891",
+        "direccion": "para que????"
+      },
+      "items": [
+        {
+          "product_id": "ilXX7V_quDyNq21oTzn8m",
+          "name": "Pantalla Hisense 100 pulgadas",
+          "price_cents": 1399999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "para que????"
+      },
+      "total_cents": 1399999,
+      "status": "shipped",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": {
+        "carrier": "DHL",
+        "tracking_number": "2223344455667",
+        "updated_at": "2026-02-26T17:40:49.397Z"
+      },
+      "created_at": "2026-02-26T11:19:41.216Z",
+      "updated_at": "2026-02-26T17:40:49.397Z"
+    },
+    {
+      "id": "ORD-QWR2U_VIEB",
+      "user_id": "lYuTC_JSJOdoXVps-vsqy",
+      "user_email": "l221080472@iztapalapa.tecnm.mx",
+      "customer": {
+        "nombre": "Alejandro",
+        "email": "alejandrofys01@gmail.com",
+        "telefono": "5512345678",
+        "direccion": "calle 39"
+      },
+      "items": [
+        {
+          "product_id": "p6wP8lGdYv8DOdv-5B2fH",
+          "name": "Xbox Series X",
+          "price_cents": 999999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772099352963-LB1z6Cmw.jpg"
+        },
+        {
+          "product_id": "ilXX7V_quDyNq21oTzn8m",
+          "name": "Pantalla Hisense 100 pulgadas",
+          "price_cents": 1399999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "calle 39"
+      },
+      "total_cents": 2399998,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T18:18:47.214Z",
+      "updated_at": "2026-02-26T18:18:47.214Z"
+    },
+    {
+      "id": "ORD-PVJRRO9ZUN",
+      "user_id": "Ffdi8SpXQ7_JdJg8FRlQD",
+      "user_email": "ana@gmail.com",
+      "customer": {
+        "nombre": "Ana",
+        "email": "ana@gmail.com",
+        "telefono": "5521887635",
+        "direccion": "calle 90"
+      },
+      "items": [
+        {
+          "product_id": "p6wP8lGdYv8DOdv-5B2fH",
+          "name": "Xbox Series X",
+          "price_cents": 999999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772099352963-LB1z6Cmw.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "calle 90"
+      },
+      "total_cents": 999999,
+      "status": "PENDING",
+      "mp_preference_id": null,
+      "mp_init_point": null,
+      "mp_payment_id": null,
+      "tracking": null,
+      "created_at": "2026-02-26T18:29:41.561Z",
+      "updated_at": "2026-02-26T18:29:41.561Z"
+    },
+    {
+      "id": "ORD-DZB5YUL8HZ",
+      "user_id": "00gMIWuZga_FOiddnUYo-",
+      "user_email": "alexito@gmail.com",
+      "customer": {
+        "nombre": "Alejandro",
+        "email": "alexito@gmail.com",
+        "telefono": "1234567899",
+        "direccion": "calle 99, 88"
+      },
+      "items": [
+        {
+          "product_id": "qrAMd3cKSTRCNaDDr6rOM",
+          "name": "MacBook Neo",
+          "price_cents": 1499900,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772915725814-vnuljDSn.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "calle 99, 88"
+      },
+      "total_cents": 1499900,
+      "status": "SHIPPED",
+      "stock_deducted": false,
+      "paid_at": null,
+      "mp_preference_id": null,
+      "mp_init_point": null,
+      "mp_payment_id": null,
+      "tracking": {
+        "carrier": "DHL",
+        "tracking_number": "12233444555",
+        "updated_at": "2026-03-07T20:38:06.729Z"
+      },
+      "created_at": "2026-03-07T20:36:55.373Z",
+      "updated_at": "2026-03-07T20:38:06.729Z"
+    },
+    {
+      "id": "ORD-XAYPGWRSCW",
+      "user_id": "00gMIWuZga_FOiddnUYo-",
+      "user_email": "alexito@gmail.com",
+      "customer": {
+        "nombre": "Alejandro",
+        "email": "alexito@gmail.com",
+        "telefono": "12345678777",
+        "direccion": "calle rrrr casa sola"
+      },
+      "items": [
+        {
+          "product_id": "fgf1EyUdsTO2g0y0sLyTm",
+          "name": "iPhone 17 Pro Max Naranja Cosmico",
+          "price_cents": 4899999,
+          "qty": 1,
+          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+        }
+      ],
+      "address_json": {
+        "direccion": "calle rrrr casa sola"
+      },
+      "total_cents": 4899999,
+      "status": "SHIPPED",
+      "stock_deducted": false,
+      "paid_at": null,
+      "mp_preference_id": null,
+      "mp_init_point": null,
+      "mp_payment_id": null,
+      "tracking": {
+        "carrier": "DHL",
+        "tracking_number": "25162058952852",
+        "updated_at": "2026-03-07T20:43:39.342Z"
+      },
+      "created_at": "2026-03-07T20:42:32.547Z",
+      "updated_at": "2026-03-07T20:43:39.342Z"
+    }
+  ],
+  "contact_messages": [
+    {
+      "id": "Riz9_hAhmdG3XzMTumbs8",
+      "name": "Alejandro",
+      "email": "alejandrofys01@gmail.com",
+      "message": "hola",
+      "created_at": "2026-02-26T18:30:51.624Z"
+    },
+    {
+      "id": "veapZUAef6mpLtgYZUDL3",
+      "name": "Alejandro",
+      "email": "alejandrofys01@gmail.com",
+      "message": "fgtg",
+      "created_at": "2026-03-07T20:32:00.838Z"
+    }
+  ],
+  "mp_notifications": []
+}
