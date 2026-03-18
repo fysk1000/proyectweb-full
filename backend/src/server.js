@@ -17,6 +17,8 @@ import jwt from 'jsonwebtoken';
 import { openDb } from './db.js';
 import { signToken, authRequired, adminRequired } from './auth.js';
 import { createPreference, getPayment } from './mp.js';
+import chatRouter from './routes/chat.js';
+import Stripe from 'stripe';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -71,7 +73,20 @@ function mapProduct(p){
 function safeLower(v){ return String(v || '').toLowerCase(); }
 
 // ---- Middleware ----
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+        "img-src": ["'self'", "data:", "https:"],
+        "frame-src": ["'self'", "https://www.google.com"],
+        "font-src": ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
+      },
+    },
+  })
+);
 app.use(morgan('dev'));
 app.use(express.json({ limit: '2mb' }));
 app.options('*', cors(corsOptions));
@@ -100,6 +115,8 @@ app.get('/', (req, res) => res.redirect(302, '/frontend/index.html'));
 
 // ---- Open DB ----
 const dbPromise = openDb();
+
+app.use('/api', chatRouter);
 
 async function dbReadWrite(fn){
   const db = await dbPromise;
@@ -359,6 +376,73 @@ function getFrontendPublicUrl() {
   return String(u).replace(/\/$/, '');
 }
 
+// ---- Stripe Checkout (Test Mode) ----
+const checkoutItemsSchema = z.object({
+  items: z.array(z.object({
+    id: z.string().min(1),
+    quantity: z.number().int().min(1)
+  })).min(1),
+  token: z.string().optional()
+});
+
+app.post('/api/checkout', async (req, res) => {
+  const stripeSecret = process.env.STRIPE_SECRET_KEY && String(process.env.STRIPE_SECRET_KEY).trim();
+  if (!stripeSecret || !stripeSecret.startsWith('sk_')) {
+    return res.status(503).json({ error: 'Stripe no configurado. Añade STRIPE_SECRET_KEY (sk_test_...) en .env' });
+  }
+  const parsed = checkoutItemsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
+  }
+  const { items: cartItems } = parsed.data;
+
+  const db = await dbPromise;
+  await db.read();
+  db.data ||= { users: [], products: [], orders: [], contact_messages: [], mp_notifications: [] };
+
+  const lineItems = [];
+  for (const it of cartItems) {
+    const p = (db.data.products || []).find(x => x.id === it.id && x.active !== false);
+    if (!p) return res.status(400).json({ error: 'Producto no válido: ' + it.id });
+    if ((p.stock || 0) < it.quantity) return res.status(409).json({ error: `Sin stock para ${p.name}. Disponible: ${p.stock}` });
+    const priceCents = Math.max(1, Number(p.price_cents) || 0);
+    const productName = (String(p.name || '').trim() || 'Producto');
+    const productDesc = (p.description && String(p.description).trim()) ? String(p.description).slice(0, 500) : 'Producto de excelente calidad de ProyectWeb';
+    lineItems.push({
+      price_data: {
+        currency: 'mxn',
+        unit_amount: priceCents,
+        product_data: {
+          name: productName,
+          description: productDesc,
+          images: p.image_url ? [p.image_url] : []
+        }
+      },
+      quantity: it.quantity
+    });
+  }
+
+  const baseUrl = getFrontendPublicUrl();
+  const pathSuffix = baseUrl.indexOf('5050') !== -1 ? '/frontend/index.html' : '';
+  const successUrl = baseUrl.replace(/\/$/, '') + pathSuffix + '?stripe=success';
+  const cancelUrl = baseUrl.replace(/\/$/, '') + pathSuffix + '?stripe=cancel';
+
+  try {
+    const stripe = new Stripe(stripeSecret);
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: lineItems,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      locale: 'es'
+    });
+    return res.status(200).json({ url: session.url });
+  } catch (err) {
+    console.error('[checkout] Stripe error:', err.message);
+    return res.status(500).json({ error: err.message || 'Error al crear la sesión de pago' });
+  }
+});
+
 const mpPreferenceSchema = z.object({
   items: z.array(z.object({
     id: z.string().optional(),
@@ -472,21 +556,16 @@ app.post('/api/orders', async (req, res) => {
   const orderId = 'ORD-' + nanoid(10).toUpperCase();
   const ts = nowISO();
 
-  if (paymentMethod === 'mercadopago') {
-    const mpToken = getMpAccessToken();
-    if (!mpToken || !String(mpToken).trim()) {
-      if (isDev) console.log('[dev] Mercado Pago: falta MERCADOPAGO_ACCESS_TOKEN');
-      return res.status(503).json({ error: 'Mercado Pago no configurado. Falta MERCADOPAGO_ACCESS_TOKEN.' });
-    }
-    const frontUrlEnv = process.env.FRONTEND_PUBLIC_URL && String(process.env.FRONTEND_PUBLIC_URL).trim();
-    if (!frontUrlEnv) {
-      if (isDev) console.log('[dev] Mercado Pago: falta FRONTEND_PUBLIC_URL');
-      return res.status(503).json({ error: 'Mercado Pago no configurado. Falta FRONTEND_PUBLIC_URL.' });
+  if (paymentMethod === 'stripe' || paymentMethod === 'mercadopago') {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY && String(process.env.STRIPE_SECRET_KEY).trim();
+    if (!stripeSecret || !stripeSecret.startsWith('sk_')) {
+      if (isDev) console.log('[dev] Stripe: falta STRIPE_SECRET_KEY');
+      return res.status(503).json({ error: 'Stripe no configurado. Añade STRIPE_SECRET_KEY (sk_test_...) en .env' });
     }
   }
 
   // Guardar orden
-  const initialStatus = paymentMethod === 'mercadopago' ? 'PENDING' : 'PENDING';
+  const initialStatus = (paymentMethod === 'stripe' || paymentMethod === 'mercadopago') ? 'PENDING' : 'PENDING';
   db.data.orders.push({
     id: orderId,
     user_id: userId,
@@ -507,38 +586,53 @@ app.post('/api/orders', async (req, res) => {
   });
   await db.write();
 
-  if (paymentMethod === 'mercadopago') {
-    const mpToken = getMpAccessToken();
-    if (!mpToken) return res.status(503).json({ error: 'Mercado Pago no configurado' });
+  if (paymentMethod === 'stripe' || paymentMethod === 'mercadopago') {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY && String(process.env.STRIPE_SECRET_KEY).trim();
+    if (!stripeSecret || !stripeSecret.startsWith('sk_')) {
+      return res.status(503).json({ error: 'Stripe no configurado. Añade STRIPE_SECRET_KEY en .env' });
+    }
+    const baseUrl = getFrontendPublicUrl();
+    const pathSuffix = baseUrl.indexOf('5050') !== -1 ? '/frontend/index.html' : '';
+    const successUrl = baseUrl.replace(/\/$/, '') + pathSuffix + '?stripe=success';
+    const cancelUrl = baseUrl.replace(/\/$/, '') + pathSuffix + '?stripe=cancel';
+    const lineItems = orderItems.map(it => {
+      const amount = Math.max(1, Number(it.price_cents) || 0);
+      const name = (String(it.name || '').trim() || 'Producto');
+      const description = (it.description && String(it.description).trim()) ? String(it.description).slice(0, 500) : 'Producto de excelente calidad de ProyectWeb';
+      return {
+        price_data: {
+          currency: 'mxn',
+          unit_amount: amount,
+          product_data: {
+            name,
+            description,
+            images: it.image_url ? [it.image_url] : []
+          }
+        },
+        quantity: it.qty
+      };
+    });
     try {
-      const pref = await createPreference({
-        orderId,
-        payerEmail: customer.email,
-        userEmail: userEmail || undefined,
-        items: orderItems.map(i => ({ name: i.name, quantity: i.qty, unit_price: mxnFromCents(i.price_cents) }))
+      const stripe = new Stripe(stripeSecret);
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: lineItems,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        locale: 'es'
       });
-      const initPoint = pref.init_point || null;
-      const sandboxInitPoint = pref.sandbox_init_point || null;
-      await db.read();
-      const o = db.data.orders.find(x => x.id === orderId);
-      if (o) {
-        o.mp_preference_id = pref.id;
-        o.mp_init_point = initPoint || sandboxInitPoint || undefined;
-        o.status = 'PENDING';
-        o.updated_at = nowISO();
-        await db.write();
-      }
+      const payUrl = session.url || undefined;
       return res.json({
         orderId,
         total: mxnFromCents(totalCents),
-        init_point: initPoint || sandboxInitPoint || undefined,
-        sandbox_init_point: sandboxInitPoint || undefined,
-        paymentUrl: initPoint || sandboxInitPoint || undefined,
-        preferenceId: pref.id
+        url: payUrl,
+        paymentUrl: payUrl,
+        init_point: payUrl,
+        sandbox_init_point: payUrl
       });
     } catch (err) {
-      console.error('MP preference error', err);
-      return res.status(500).json({ error: 'No se pudo iniciar el pago con Mercado Pago' });
+      console.error('[orders] Stripe error:', err.message);
+      return res.status(500).json({ error: 'No se pudo iniciar el pago con Stripe' });
     }
   }
   return res.json({ orderId, total: mxnFromCents(totalCents) });
