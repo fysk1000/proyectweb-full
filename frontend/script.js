@@ -18,7 +18,7 @@ const App = (function() {
   let useBackend = false;
   let adminToken = null;
   let clientToken = null;
-  let selectedPaymentMethod = 'none'; // 'none' | 'mercadopago'
+  let selectedPaymentMethod = 'none'; // 'none' | 'stripe'
   let ADMIN_USERS = [];
   try {
     adminToken = localStorage.getItem(STORAGE_ADMIN_TOKEN);
@@ -308,8 +308,6 @@ const App = (function() {
     const holaClienteMobile = document.getElementById('nav-hola-cliente-mobile');
     const vistaCliente = document.getElementById('vista-cliente');
     const vistaAdmin = document.getElementById('vista-admin');
-    const btnLogout = document.getElementById('btn-logout');
-    const btnLogoutMobile = document.getElementById('btn-logout-mobile');
 
     if (loggedIn) {
       // Ocultar botones de Login
@@ -336,15 +334,7 @@ const App = (function() {
         holaClienteMobile.classList.remove('auth-hidden');
         holaClienteMobile.classList.add('auth-visible-block');
       }
-      
-      // Configurar eventos de logout
-      if (btnLogout) {
-        btnLogout.onclick = handleLogout;
-      }
-      if (btnLogoutMobile) {
-        btnLogoutMobile.onclick = handleLogout;
-      }
-      
+
       // Mostrar vistas según el tipo de usuario
       if (isAdminUser) {
         if (vistaCliente) vistaCliente.classList.add('hidden');
@@ -395,9 +385,30 @@ const App = (function() {
       localStorage.removeItem(STORAGE_ROLE);
       localStorage.removeItem(STORAGE_ADMIN_TOKEN);
       localStorage.removeItem(STORAGE_CLIENT_TOKEN);
+      localStorage.clear();
+      sessionStorage.clear();
     } catch (_) {}
     adminToken = null;
     clientToken = null;
+
+    // Limpieza inmediata del chat (UI) para evitar cualquier rastro visual.
+    try {
+      const chatContainer = document.getElementById('chat-messages');
+      if (chatContainer) chatContainer.innerHTML = '';
+    } catch (_) {}
+
+    // Reset del chatbot en el momento del logout.
+    try {
+      if (typeof window.reiniciarChat === 'function') {
+        window.reiniciarChat({
+          welcomeText: '¡Hola! Bienvenido a ProyectWeb. Veo que no te has registrado. Si quieres, puedo darte un tour por la tienda o ayudarte a encontrar un producto.'
+        });
+      }
+    } catch (_) {}
+
+    try {
+      window.dispatchEvent(new CustomEvent('proyectweb-logout'));
+    } catch (_) {}
     updateAuthUI();
     closeLoginModal();
     closeCheckoutModal();
@@ -509,10 +520,6 @@ const App = (function() {
     if (cart.length === 0) {
       listEl.innerHTML = '<p class="text-slate-500 text-center py-8">Tu carrito está vacío.</p>';
       if (subtotalEl) subtotalEl.textContent = formatPrice(0);
-      const btnMp = document.getElementById('btn-pay-mp');
-      const legendMp = document.getElementById('cart-drawer-mp-legend');
-      if (btnMp) btnMp.classList.add('hidden');
-      if (legendMp) legendMp.classList.add('hidden');
       return;
     }
 
@@ -554,10 +561,6 @@ const App = (function() {
     });
 
     if (subtotalEl) subtotalEl.textContent = formatPrice(getCartTotal());
-    const btnMp = document.getElementById('btn-pay-mp');
-    const legendMp = document.getElementById('cart-drawer-mp-legend');
-    if (btnMp) btnMp.classList.toggle('hidden', !useBackend);
-    if (legendMp) legendMp.classList.toggle('hidden', !useBackend);
   }
 
   // ========== MODAL CHECKOUT ==========
@@ -569,6 +572,8 @@ const App = (function() {
     }
     renderCheckoutSummary();
     updateCheckoutModalPaymentUI();
+    const popupWarningEl = document.getElementById('checkout-popup-warning');
+    if (popupWarningEl) popupWarningEl.classList.add('hidden');
     const modal = document.getElementById('checkout-modal');
     if (modal) {
       modal.classList.remove('hidden');
@@ -580,8 +585,8 @@ const App = (function() {
   function updateCheckoutModalPaymentUI() {
     const submitBtn = document.getElementById('checkout-form-submit');
     const badge = document.getElementById('checkout-payment-badge');
-    if (submitBtn) submitBtn.textContent = selectedPaymentMethod === 'mercadopago' ? 'Pagar con Mercado Pago' : 'Confirmar pedido';
-    if (badge) badge.classList.toggle('hidden', selectedPaymentMethod !== 'mercadopago');
+    if (submitBtn) submitBtn.textContent = selectedPaymentMethod === 'stripe' ? 'Pagar con Stripe' : 'Confirmar pedido';
+    if (badge) badge.classList.toggle('hidden', selectedPaymentMethod !== 'stripe');
   }
 
   function resetCheckoutPaymentUI() {
@@ -598,6 +603,8 @@ const App = (function() {
       modal.classList.add('hidden');
       modal.setAttribute('aria-hidden', 'true');
     }
+    const popupWarningEl = document.getElementById('checkout-popup-warning');
+    if (popupWarningEl) popupWarningEl.classList.add('hidden');
     resetCheckoutPaymentUI();
   }
 
@@ -762,22 +769,35 @@ const App = (function() {
             customer: { nombre, email, telefono, direccion },
             items: itemsForApi
           };
-          if (selectedPaymentMethod === 'mercadopago') payload.paymentMethod = 'mercadopago';
-          const res = await window.ProyectWebAPI.createOrderAndPayment(token, payload);
-          if (isDev) console.debug('[checkout] res', res);
+          if (selectedPaymentMethod === 'stripe') payload.paymentMethod = 'stripe';
+          const response = await window.ProyectWebAPI.createOrderAndPayment(token, payload);
+          const result = response && typeof response === 'object' ? response : {};
+          if (isDev) console.debug('[checkout] result', result);
 
-          const orderId = String(res.orderId || res.order_id || res.id || (res.order && (res.order.id || res.order.orderId)) || '').trim() || ('PW-' + Date.now());
+          const orderId = String(result.orderId || result.order_id || result.id || (result.order && (result.order.id || result.order.orderId)) || '').trim() || ('PW-' + Date.now());
           try { localStorage.setItem(STORAGE_LAST_ORDER_ID, orderId); } catch (_) {}
-          const totalFromBackend = res.total != null ? Number(res.total) : (res.total_cents != null ? Number(res.total_cents) / 100 : totalSnapshot);
-          const paymentUrl = (res.paymentUrl || res.init_point || res.sandbox_init_point) && String(res.paymentUrl || res.init_point || res.sandbox_init_point).trim()
-            ? (res.paymentUrl || res.init_point || res.sandbox_init_point)
-            : null;
+          const totalFromBackend = result.total != null ? Number(result.total) : (result.total_cents != null ? Number(result.total_cents) / 100 : totalSnapshot);
+          const paymentUrl = (result.url || result.paymentUrl || result.init_point || result.sandbox_init_point);
+          const payUrl = paymentUrl && String(paymentUrl).trim() ? String(paymentUrl).trim() : null;
 
-          if (paymentUrl) {
-            if (isDev) console.debug('[checkout] redirect to MP', orderId);
-            closeCheckoutModal();
-            toast('Pedido creado. Redirigiendo a Mercado Pago...', 'info');
-            setTimeout(function() { window.location.href = paymentUrl; }, 1500);
+          if (payUrl) {
+            if (isDev) console.debug('[checkout] open Stripe in popup', orderId);
+            const popupWarningEl = document.getElementById('checkout-popup-warning');
+            if (popupWarningEl) popupWarningEl.classList.add('hidden');
+            toast('Abriendo la ventana de pago...', 'info');
+            const popup = window.open(payUrl, 'Pago', 'width=500,height=700,top=100,left=100');
+            if (popup && !popup.closed) {
+              closeCheckoutModal();
+              return;
+            }
+            console.warn('[checkout] Pop-up bloqueado por el navegador');
+            if (popupWarningEl) {
+              popupWarningEl.classList.remove('hidden');
+            }
+            try {
+              window.dispatchEvent(new CustomEvent('proyectweb-chat-warning', { detail: { text: 'Por favor, permite las ventanas emergentes para pagar' } }));
+            } catch (_) {}
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
             return;
           }
           if (isDev) console.debug('[checkout] order created', orderId, totalFromBackend);
@@ -865,6 +885,10 @@ const App = (function() {
     [btnLogin, btnLoginMobile].forEach(btn => {
       if (btn) btn.addEventListener('click', openLoginModal);
     });
+    const btnLogout = document.getElementById('btn-logout');
+    const btnLogoutMobile = document.getElementById('btn-logout-mobile');
+    if (btnLogout) btnLogout.addEventListener('click', handleLogout);
+    if (btnLogoutMobile) btnLogoutMobile.addEventListener('click', handleLogout);
     if (closeBtn) closeBtn.addEventListener('click', closeLoginModal);
     if (modal) {
       modal.addEventListener('click', function(e) {
@@ -944,7 +968,6 @@ const App = (function() {
     const overlay = document.getElementById('cart-drawer-overlay');
     const closeBtn = document.getElementById('cart-drawer-close');
     const checkoutBtn = document.getElementById('cart-drawer-checkout');
-    const btnPayMp = document.getElementById('btn-pay-mp');
 
     if (btnCart) btnCart.addEventListener('click', openCartDrawer);
     if (closeBtn) closeBtn.addEventListener('click', closeCartDrawer);
@@ -955,28 +978,7 @@ const App = (function() {
           toast('El carrito está vacío', 'error');
           return;
         }
-        selectedPaymentMethod = 'none';
-        closeCartDrawer();
-        openCheckoutModal();
-      });
-    }
-    if (btnPayMp) {
-      btnPayMp.addEventListener('click', () => {
-        if (!useBackend) {
-          toast('Mercado Pago solo disponible con servidor', 'info');
-          return;
-        }
-        const token = adminToken || clientToken;
-        if (!token) {
-          toast('Inicia sesión para pagar con Mercado Pago', 'info');
-          openLoginModal();
-          return;
-        }
-        if (getCartCount() === 0) {
-          toast('El carrito está vacío', 'error');
-          return;
-        }
-        selectedPaymentMethod = 'mercadopago';
+        selectedPaymentMethod = 'stripe';
         closeCartDrawer();
         openCheckoutModal();
       });
@@ -1041,6 +1043,57 @@ const App = (function() {
       modal.classList.add('hidden');
       modal.setAttribute('aria-hidden', 'true');
     }
+  }
+
+  function openStripeInfoModal() {
+    const modal = document.getElementById('mp-info-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function closeStripeInfoModal() {
+    const modal = document.getElementById('mp-info-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function initMpInfoModal() {
+    const modal = document.getElementById('mp-info-modal');
+    const closeBtn = document.getElementById('mp-info-modal-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeStripeInfoModal);
+    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeStripeInfoModal(); });
+  }
+
+  /** Scroll suave a una sección por id y opcionalmente refresca el catálogo si es #catalogo */
+  function scrollToSection(sectionId) {
+    const el = document.getElementById(sectionId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Scroll al catálogo y refresca renderCatalog (para Quick Reply y enlaces) */
+  function scrollToCatalogAndRefresh() {
+    scrollToSection('catalogo');
+    const grid = document.getElementById('catalog-grid');
+    if (grid) renderCatalog(grid);
+  }
+
+  /**
+   * Abre la pasarela de pago de Stripe en una ventana centrada (500x700, sin barra de menú/herramientas).
+   * Usado por Visitante y Usuario al hacer clic en "Pagar".
+   */
+  function openStripePaymentWindow(url) {
+    if (!url || typeof url !== 'string') return null;
+    const w = 500;
+    const h = 700;
+    const left = Math.max(0, Math.floor((window.screen.width - w) / 2));
+    const top = Math.max(0, Math.floor((window.screen.height - h) / 2));
+    const features = 'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top +
+      ',menubar=no,toolbar=no,location=no,status=no';
+    return window.open(url, 'StripeCheckout', features);
   }
 
   function initRegisterModal() {
@@ -1197,7 +1250,7 @@ const App = (function() {
     fileInput.addEventListener('change', updateProductImagePreview);
   }
 
-  /** Resultado al volver de Mercado Pago: mp=success|pending|failure y orderId en la URL. En success consulta GET /api/orders/:id y muestra Pedido/Total reales; solo en success se vacía el carrito. */
+  /** Resultado al volver de Stripe: stripe=success|cancel en la URL. En success se muestra mensaje en el chat y se vacía el carrito si aplica. */
   function initPaymentResult() {
     const params = new URLSearchParams(window.location.search);
     const mp = params.get('mp');
@@ -2028,6 +2081,7 @@ const App = (function() {
     initContactForm();
     initRegisterModal();
     initProductModal();
+    initMpInfoModal();
     initProductImagePreview();
     initAdminActions();
     initUserModal();
@@ -2042,6 +2096,44 @@ const App = (function() {
     }
   }
 
+  // Disponibilidad global para el chatbot: funciones que ejecutarAccionChat() puede llamar
+  window.renderProducts = function() {
+    const el = document.getElementById('productos') || document.getElementById('catalogo');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const grid = document.getElementById('catalog-grid');
+    if (grid) renderCatalog(grid);
+  };
+  window.abrirModalRegistro = openRegisterModal;
+  window.abrirCarrito = openCartDrawer;
+  window.mostrarEstadisticasAdmin = function() {
+    refreshAdminStats();
+    scrollToSection('vista-admin');
+  };
+
+  window.agregarAlCarrito = function(id) {
+    if (!id) return false;
+    return addToCart(id, 1);
+  };
+
+  window.mostrarSeccionProductos = function() {
+    if (typeof scrollToCatalogAndRefresh === 'function') scrollToCatalogAndRefresh();
+    if (typeof renderCatalog === 'function') {
+      const grid = document.getElementById('catalog-grid');
+      if (grid) renderCatalog(grid);
+    }
+    const el = document.getElementById('productos') || document.getElementById('catalogo');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.mostrarSoporte = function() {
+    if (typeof scrollToSection === 'function') {
+      scrollToSection('contacto');
+      setTimeout(function() { scrollToSection('footer'); }, 1200);
+    }
+  };
+
+  window.abrirVentanaPagoStripe = openStripePaymentWindow;
+
   return {
     init,
     getCart: () => cart,
@@ -2051,6 +2143,19 @@ const App = (function() {
     removeFromCart,
     setQuantity,
     openCartDrawer,
+    openCheckoutModal,
+    openRegisterModal,
+    openStripeInfoModal,
+    openMercadoPagoInfoModal: openStripeInfoModal,
+    scrollToSection,
+    scrollToCatalogAndRefresh,
+    refreshAdminStats,
+    renderMisPedidos,
     toast,
   };
 })();
+
+window.App = App;
+document.addEventListener('DOMContentLoaded', function() {
+  App.init();
+});

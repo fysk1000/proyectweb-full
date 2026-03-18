@@ -15,7 +15,7 @@
     return DEFAULT_BASE;
   }
 
-  async function request(path, { method='GET', token=null, json=null, form=null } = {}){
+  async function request(path, { method='GET', token=null, json=null, form=null, signal=null } = {}){
     const base = getBase();
     const url = base + path;
     const headers = {};
@@ -30,7 +30,7 @@
       body = form;
     }
 
-    const res = await fetch(url, { method, headers, body, credentials: 'omit' });
+    const res = await fetch(url, { method, headers, body, credentials: 'omit', signal: signal || undefined });
     const text = await res.text();
     let data;
     try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
@@ -66,6 +66,11 @@
 
     createOrderAndPayment(token, payload) {
       return request('/api/orders', { method: 'POST', token, json: payload });
+    },
+
+    /** Crea una sesión de Stripe Checkout y devuelve la URL de pago (modo prueba). */
+    createCheckoutSession(items, token) {
+      return request('/api/checkout', { method: 'POST', token: token || undefined, json: { items } });
     },
 
     getMyOrders(token) {
@@ -136,6 +141,14 @@
 
     sendContact(payload) {
       return request('/api/contact', { method: 'POST', json: payload });
+    },
+
+    chat(message, token, userContext, options) {
+      const body = { message: String(message || ''), token: token || undefined };
+      if (userContext && typeof userContext === 'object') {
+        body.userContext = { role: userContext.role, name: userContext.name };
+      }
+      return request('/api/chat', { method: 'POST', json: body, signal: (options && options.signal) || null });
     }
   };
 })();

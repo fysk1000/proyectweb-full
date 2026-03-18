@@ -147,7 +147,7 @@
           </div>
 
           <!-- Gestión de Productos -->
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+          <div id="admin-gestion-productos" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-semibold text-slate-900">
                 <i class="fa-solid fa-list mr-2 text-indigo-600"></i>Gestión de Productos
@@ -175,7 +175,7 @@
           </div>
 
           <!-- Gestión de Usuarios -->
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+          <div id="admin-usuarios" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-semibold text-slate-900">
                 <i class="fa-solid fa-users mr-2 text-purple-600"></i>Gestión de Usuarios
@@ -203,7 +203,7 @@
           </div>
 
           <!-- Pedidos recientes -->
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+          <div id="admin-pedidos" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
             <h3 class="text-xl font-semibold text-slate-900 mb-4">
               <i class="fa-solid fa-receipt mr-2 text-green-600"></i>Pedidos recientes
             </h3>
@@ -290,7 +290,7 @@
   </main>
 
   <!-- Footer con redes sociales -->
-  <footer class="footer-section py-10 bg-slate-900 text-slate-300">
+  <footer id="footer" class="footer-section py-10 bg-slate-900 text-slate-300">
     <div class="container mx-auto px-4 text-center">
       <p class="text-sm mb-4">© 2025 ProyectWeb. Proyecto multi-página HTML5 + Tailwind + JS.</p>
       <nav class="flex justify-center gap-6 text-sm mb-4">
@@ -470,42 +470,39 @@
     <div class="cart-drawer-footer">
       <p class="flex justify-between text-slate-700 mb-4"><span>Subtotal</span><span id="cart-drawer-subtotal">$0.00 MXN</span></p>
       <button type="button" id="cart-drawer-checkout" class="btn btn-primary w-full">Finalizar compra</button>
-      <button type="button" id="btn-pay-mp" class="btn btn-secondary w-full mt-2 hidden" aria-label="Pagar con Mercado Pago">
-        Pagar con Mercado Pago
-      </button>
-      <p id="cart-drawer-mp-legend" class="hidden text-xs text-slate-500 mt-1 text-center">Serás redirigido a Mercado Pago</p>
     </div>
   </aside>
 
   <!-- Modal Checkout: datos de envío y confirmación -->
   <div id="checkout-modal" class="modal-overlay hidden" aria-hidden="true">
-    <div class="modal-box max-w-lg" role="dialog" aria-labelledby="checkout-modal-title">
-      <div class="flex justify-between items-center mb-4">
-        <h2 id="checkout-modal-title" class="text-xl font-semibold text-slate-900">Finalizar compra</h2>
+    <div class="modal-box checkout-modal-box w-full py-4 px-4 sm:py-6 sm:px-6" role="dialog" aria-labelledby="checkout-modal-title">
+      <div class="flex justify-between items-center mb-4 shrink-0">
+        <h2 id="checkout-modal-title" class="text-xl sm:text-2xl font-semibold text-slate-900">Finalizar compra</h2>
         <button type="button" id="checkout-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
       </div>
       <div id="checkout-summary" class="mb-4 p-4 bg-slate-50 rounded-lg text-sm text-slate-700"></div>
-      <p id="checkout-payment-badge" class="hidden mb-3 text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-2 rounded">Método de pago: Mercado Pago</p>
-      <form id="checkout-form">
+      <p id="checkout-payment-badge" class="hidden mb-3 text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-2 rounded">Método de pago: Stripe</p>
+      <form id="checkout-form" class="space-y-0">
         <div class="mb-3">
           <label for="checkout-name" class="label-field">Nombre completo</label>
-          <input type="text" id="checkout-name" name="nombre" class="input-field" placeholder="Tu nombre" required>
+          <input type="text" id="checkout-name" name="nombre" class="input-field w-full" placeholder="Tu nombre" required>
         </div>
         <div class="mb-3">
           <label for="checkout-email" class="label-field">Correo electrónico</label>
-          <input type="email" id="checkout-email" name="email" class="input-field" placeholder="tu@email.com" required>
+          <input type="email" id="checkout-email" name="email" class="input-field w-full" placeholder="tu@email.com" required>
         </div>
         <div class="mb-3">
           <label for="checkout-phone" class="label-field">Teléfono</label>
-          <input type="tel" id="checkout-phone" name="telefono" class="input-field" placeholder="55 1234 5678" required>
+          <input type="tel" id="checkout-phone" name="telefono" class="input-field w-full" placeholder="55 1234 5678" required>
         </div>
         <div class="mb-4">
           <label for="checkout-address" class="label-field">Dirección de envío</label>
-          <textarea id="checkout-address" name="direccion" class="input-field min-h-[80px] resize-y" placeholder="Calle, número, colonia, CP, ciudad..." required></textarea>
+          <textarea id="checkout-address" name="direccion" class="input-field w-full min-h-[80px] resize-y" placeholder="Calle, número, colonia, CP, ciudad..." required></textarea>
         </div>
-        <div class="flex gap-3">
+        <div id="checkout-popup-warning" class="hidden mt-3 text-amber-700 bg-amber-50 px-3 py-2 rounded text-sm" role="alert">Por favor, permite las ventanas emergentes para pagar</div>
+        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-1">
+          <button type="button" id="checkout-modal-cancel" class="btn btn-secondary sm:flex-1">Cancelar</button>
           <button type="submit" id="checkout-form-submit" class="btn btn-primary flex-1">Confirmar pedido</button>
-          <button type="button" id="checkout-modal-cancel" class="btn btn-secondary">Cancelar</button>
         </div>
       </form>
     </div>
@@ -526,7 +523,7 @@
     </div>
   </div>
 
-  <!-- Mensaje de resultado de pago (Mercado Pago / PayPal) -->
+  <!-- Mensaje de resultado de pago (Stripe) -->
   <div id="payment-result" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
     <div class="bg-white rounded-2xl p-6 max-w-md w-full text-center shadow-xl">
       <p id="payment-result-text" class="text-slate-700 mb-4"></p>
@@ -534,12 +531,69 @@
     </div>
   </div>
 
+  <!-- Modal informativo Stripe (pagos) -->
+  <div id="mp-info-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box max-w-md" role="dialog" aria-labelledby="mp-info-title">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="mp-info-title" class="text-xl font-semibold text-slate-900">💳 Pagar con Stripe</h2>
+        <button type="button" id="mp-info-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div class="modal-content text-slate-700 text-sm space-y-3">
+        <p>1️⃣ Agrega productos al carrito.</p>
+        <p>2️⃣ Pulsa "💳 Pagar" en el chat o Finalizar compra.</p>
+        <p>3️⃣ Serás redirigido a la página oficial de Stripe para pagar con tarjeta.</p>
+        <p class="text-slate-600"><strong>Modo prueba:</strong> usa la tarjeta 4242 4242 4242 4242, cualquier fecha futura y CVC.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Asistente de Ventas de Alto Rendimiento: interfaz premium Tailwind -->
+  <div id="chat-assistant-wrap" class="fixed bottom-6 right-6 z-[80] flex flex-col items-end gap-3 font-outfit">
+    <div id="chat-panel" class="chat-panel w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 bg-white overflow-hidden flex flex-col transition-all duration-300 ease-out opacity-0 scale-95 translate-y-2 max-h-0" aria-label="Chat del asistente" aria-hidden="true">
+      <div class="flex items-center justify-between px-4 py-3 bg-indigo-600 text-white rounded-t-2xl shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="chat-avatar chat-avatar-bot w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm shrink-0"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>
+          <span class="font-semibold truncate">Asistente de Ventas</span>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <span id="chat-offline-badge" class="hidden text-xs px-2 py-0.5 rounded bg-amber-500 text-white font-medium">Modo Offline</span>
+          <button type="button" id="chat-reset-conversation" class="p-2 rounded-lg hover:bg-indigo-500 transition text-white shrink-0" aria-label="Nueva conversación"><i class="fa-solid fa-trash"></i></button>
+          <button type="button" id="chat-panel-close" class="p-2 rounded-lg hover:bg-indigo-500 transition text-white shrink-0" aria-label="Cerrar chat"><i class="fa-solid fa-chevron-down"></i></button>
+        </div>
+      </div>
+      <div id="chat-messages" class="flex-1 min-h-[14rem] max-h-[22rem] overflow-y-auto p-4 bg-slate-50 flex flex-col gap-3 min-h-0">
+        <div class="chat-bubble-wrap chat-bubble-bot flex gap-2 items-start animate-fade-in">
+          <span class="chat-avatar chat-avatar-bot w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot"></i></span>
+          <div class="chat-bubble chat-bubble-bot max-w-[85%] px-3 py-2.5 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm text-sm text-slate-700 break-words">
+            <p id="chat-welcome-msg" class="chat-bubble-text m-0 break-words">Cargando...</p>
+          </div>
+        </div>
+        <div id="chat-typing-indicator" class="hidden chat-bubble-wrap chat-bubble-bot flex gap-2 items-start animate-fade-in">
+          <span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot"></i></span>
+          <div class="px-3 py-2.5 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm text-sm text-slate-500 flex items-center gap-1">
+            <span class="typing-dot w-2 h-2 rounded-full bg-slate-400 animate-typing-dot"></span>
+            <span class="typing-dot w-2 h-2 rounded-full bg-slate-400 animate-typing-dot animation-delay-200"></span>
+            <span class="typing-dot w-2 h-2 rounded-full bg-slate-400 animate-typing-dot animation-delay-400"></span>
+          </div>
+        </div>
+      </div>
+      <div class="p-3 border-t border-slate-200 bg-white rounded-b-2xl shrink-0 flex flex-col min-h-0 max-h-[14rem] overflow-hidden">
+        <div class="max-h-[8rem] overflow-y-auto mb-2 min-h-[2.5rem]">
+          <div id="quick-replies" class="quick-replies flex flex-wrap gap-2" aria-label="Acciones rápidas"></div>
+        </div>
+        <form id="chat-form" class="flex gap-2 shrink-0">
+          <input type="text" id="chat-input" class="flex-1 px-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Escribe tu mensaje..." autocomplete="off" maxlength="500" aria-label="Mensaje">
+          <button type="submit" class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition shrink-0" aria-label="Enviar"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+        </form>
+      </div>
+    </div>
+    <button type="button" id="chat-toggle" class="w-14 h-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center text-xl hover:bg-indigo-700 hover:scale-105 transition-all focus:outline-none focus:ring-4 focus:ring-indigo-300" aria-label="Abrir asistente" aria-expanded="false">
+      <i class="fa-solid fa-comments" aria-hidden="true"></i>
+    </button>
+  </div>
+
   <script src="./api.js"></script>
   <script src="./script.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      App.init();
-    });
-  </script>
+  <script src="./chat.js"></script>
 </body>
 </html>
