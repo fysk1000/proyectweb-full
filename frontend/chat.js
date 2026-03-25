@@ -26,7 +26,7 @@
   const App = window.App;
 
   function getBase() {
-    return API && typeof API.getBase === 'function' ? API.getBase() : 'http://localhost:5050';
+    return API && typeof API.getBase === 'function' ? API.getBase() : '';
   }
 
   function getToken() {

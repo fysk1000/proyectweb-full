@@ -22,8 +22,10 @@ import Stripe from 'stripe';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = Number(process.env.PORT || 5050);
+const PORT = process.env.PORT || 5050;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+const corsAllowAll = ['1', 'true', 'yes'].includes(String(process.env.CORS_ALLOW_ALL || '').toLowerCase());
 
 const corsWhitelist = [
   'http://localhost:5500',
@@ -40,6 +42,7 @@ if (process.env.FRONTEND_URL) {
 
 const corsOptions = {
   origin(origin, callback) {
+    if (corsAllowAll) return callback(null, true);
     if (!origin) return callback(null, true);
     if (corsWhitelist.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
@@ -376,6 +379,16 @@ function getFrontendPublicUrl() {
   return String(u).replace(/\/$/, '');
 }
 
+/** Ruta del HTML de la tienda para callbacks Stripe/MP (mismo backend en 5050 o en Render). */
+function getStripeReturnPathSuffix() {
+  const explicit = process.env.STRIPE_RETURN_PATH;
+  if (explicit != null && String(explicit).trim()) return String(explicit).trim();
+  const pub = getFrontendPublicUrl();
+  if (/localhost:5050|127\.0\.0\.1:5050/.test(pub)) return '/frontend/index.html';
+  if (/^https?:\/\//i.test(pub) && !/localhost|127\.0\.0\.1/i.test(pub)) return '/frontend/index.html';
+  return '';
+}
+
 // ---- Stripe Checkout (Test Mode) ----
 const checkoutItemsSchema = z.object({
   items: z.array(z.object({
@@ -592,7 +605,7 @@ app.post('/api/orders', async (req, res) => {
       return res.status(503).json({ error: 'Stripe no configurado. Añade STRIPE_SECRET_KEY en .env' });
     }
     const baseUrl = getFrontendPublicUrl();
-    const pathSuffix = baseUrl.indexOf('5050') !== -1 ? '/frontend/index.html' : '';
+    const pathSuffix = getStripeReturnPathSuffix();
     const successUrl = baseUrl.replace(/\/$/, '') + pathSuffix + '?stripe=success';
     const cancelUrl = baseUrl.replace(/\/$/, '') + pathSuffix + '?stripe=cancel';
     const lineItems = orderItems.map(it => {
@@ -985,6 +998,7 @@ app.post('/api/dev/seed', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Backend listo en http://localhost:${PORT}`);
-  console.log('CORS permitido para:', corsWhitelist.join(', '));
+  const publicUrl = process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`;
+  console.log(`Backend listo en ${publicUrl}`);
+  console.log(corsAllowAll ? 'CORS: cualquier origen (CORS_ALLOW_ALL)' : 'CORS permitido para: ' + corsWhitelist.join(', '));
 });

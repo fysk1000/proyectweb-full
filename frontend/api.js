@@ -4,7 +4,8 @@
  * - Mantiene el contrato que ya usa script.js
  */
 (function(){
-  const DEFAULT_BASE = 'http://localhost:5050';
+  /** Vacío = mismo origen (recomendado en Render u otro despliegue unificado). */
+  const DEFAULT_BASE = '';
 
   function getBase(){
     try {
