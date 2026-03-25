@@ -2,8 +2,13 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data.json');
+// Configuramos el __dirname para ESM
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// LA CLAVE: Subimos un nivel desde 'src' para encontrar 'data.json' en la raíz de 'backend'
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data.json');
 
 const defaultData = {
   users: [],
@@ -23,7 +28,8 @@ export async function openDb() {
 }
 
 export function ensureUploadsDir() {
-  const dir = path.join(process.cwd(), 'uploads');
+  // También corregimos la ruta de las imágenes para que se guarden en 'backend/uploads'
+  const dir = path.join(__dirname, '..', 'uploads');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
