@@ -22,6 +22,7 @@ import Stripe from 'stripe';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5050;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
