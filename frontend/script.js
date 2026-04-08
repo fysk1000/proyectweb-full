@@ -1144,6 +1144,13 @@ const App = (function() {
           const res = await window.ProyectWebAPI.register(email, password, nombre || '');
           const token = res.token;
           const user = res.user;
+          if (user && res.message && !token) {
+            closeRegisterModal();
+            form.reset();
+            toast(res.message, 'success');
+            openLoginModal();
+            return;
+          }
           if (token && user) {
             try {
               localStorage.setItem(STORAGE_CLIENT_TOKEN, token);

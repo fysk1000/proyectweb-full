@@ -28,6 +28,41 @@ const groqModel = process.env.GROQ_MODEL && String(process.env.GROQ_MODEL).trim(
 const groqClient = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null;
 
 /**
+ * Si el cuerpo incluye token JWT: debe ser válido y con correo verificado (emailVerified !== false).
+ * Sin token o token vacío: invitado (no bloquea).
+ */
+function assertChatBearerVerified(bodyToken, res) {
+  const raw = bodyToken != null ? String(bodyToken).trim() : '';
+  if (!raw) return true;
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 16) {
+    res.status(503).json({ error: 'Servicio no configurado', message: 'JWT no configurado en el servidor.' });
+    return false;
+  }
+  try {
+    const payload = jwt.verify(raw, secret);
+    if (payload.emailVerified === false) {
+      res.status(403).json({
+        error: 'Por favor, verifica tu correo antes de iniciar sesión',
+        code: 'EMAIL_NOT_VERIFIED'
+      });
+      return false;
+    }
+    return true;
+  } catch (err) {
+    const expired = err && err.name === 'TokenExpiredError';
+    res.status(401).json({
+      error: 'No autorizado',
+      message: expired
+        ? 'El token de sesión ha expirado. Vuelve a iniciar sesión.'
+        : 'Token inválido o alterado. Vuelve a iniciar sesión.',
+      code: expired ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID'
+    });
+    return false;
+  }
+}
+
+/**
  * Lista de respuestas predefinidas (sin IA). Fácil de ampliar: añade un objeto con
  * id, keywords (minúsculas), opcional role, y response (texto o 'dynamic' para lógica especial).
  */
@@ -277,6 +312,8 @@ router.post('/chat', async (req, res) => {
     return res.status(400).json({ error: 'Datos inválidos', details: parsedBody.error.issues });
   }
   const body = parsedBody.data;
+  if (!assertChatBearerVerified(body.token, res)) return;
+
   try {
     const { message, userContext, token } = body;
     const role = (userContext && userContext.role) ? String(userContext.role).toUpperCase() : 'GUEST';

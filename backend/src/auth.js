@@ -9,11 +9,23 @@ export function signToken(user) {
     throw new Error('JWT_SECRET missing or too short (min 16 chars)');
   }
   const expiresIn = (process.env.JWT_EXPIRES_IN && String(process.env.JWT_EXPIRES_IN).trim()) || DEFAULT_JWT_EXPIRES;
+  /** Cuentas antiguas sin isVerified se consideran verificadas; solo bloquea isVerified === false */
+  const emailVerified = user.isVerified !== false;
   return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role, name: user.name },
+    { sub: user.id, email: user.email, role: user.role, name: user.name, emailVerified },
     secret,
     { expiresIn }
   );
+}
+
+function rejectIfEmailNotVerified(payload, res) {
+  if (payload && payload.emailVerified === false) {
+    return res.status(403).json({
+      error: 'Por favor, verifica tu correo antes de iniciar sesión',
+      code: 'EMAIL_NOT_VERIFIED'
+    });
+  }
+  return null;
 }
 
 export function authRequired(req, res, next) {
@@ -35,6 +47,8 @@ export function authRequired(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, secret);
+    const denied = rejectIfEmailNotVerified(payload, res);
+    if (denied) return denied;
     req.user = payload;
     return next();
   } catch (err) {
@@ -92,6 +106,8 @@ export function optionalBearerAuth(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, secret);
+    const denied = rejectIfEmailNotVerified(payload, res);
+    if (denied) return denied;
     req.bearerUser = {
       id: payload.sub,
       email: payload.email,

@@ -168,21 +168,51 @@ app.post('/api/auth/register', async (req, res) => {
   const name = (typeof nameRaw === 'string' && nameRaw.trim()) ? nameRaw.trim() : ((email || '').split('@')[0] || email || '');
 
   try {
-    return await dbReadWrite(async (db) => {
+    let created = null;
+    await dbReadWrite(async (db) => {
       const exists = db.data.users.find(u => u.email === email);
-      if (exists) return res.status(409).json({ error: 'El correo ya está registrado' });
+      if (exists) {
+        created = { conflict: true };
+        return;
+      }
 
+      const verificationToken = nanoid();
       const user = {
         id: nanoid(),
         email,
         name,
         password_hash: bcrypt.hashSync(password, 10),
         role: 'CLIENT',
+        isVerified: false,
+        verificationToken,
         created_at: nowISO()
       };
       db.data.users.push(user);
-      const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
-      return res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+      created = { user };
+    });
+
+    if (created && created.conflict) {
+      return res.status(409).json({ error: 'El correo ya está registrado' });
+    }
+    if (!created || !created.user) {
+      return res.status(500).json({ error: 'Error interno del servidor' });
+    }
+
+    try {
+      await sendVerificationEmail(created.user.email, created.user.verificationToken);
+    } catch (mailErr) {
+      console.error('[register] correo de verificación:', mailErr.message);
+    }
+
+    return res.status(201).json({
+      user: {
+        id: created.user.id,
+        email: created.user.email,
+        name: created.user.name,
+        role: created.user.role,
+        isVerified: false
+      },
+      message: 'Registro exitoso. Revisa tu correo y pulsa el enlace para verificar tu cuenta antes de iniciar sesión.'
     });
   } catch (err) {
     return res.status(500).json({ error: 'Error interno del servidor' });
@@ -231,9 +261,27 @@ app.post('/api/auth/login', async (req, res) => {
       if (isDev) console.log('[dev] login', email, 'inactive');
       return res.status(401).json({ error: 'Cuenta desactivada' });
     }
+    if (user.isVerified === false) {
+      return res.status(403).json({ error: 'Por favor, verifica tu correo antes de iniciar sesión', code: 'EMAIL_NOT_VERIFIED' });
+    }
 
-    const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
-    return res.status(200).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+    const token = signToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isVerified: user.isVerified !== false
+    });
+    return res.status(200).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: user.isVerified !== false
+      }
+    });
   } catch (err) {
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
@@ -241,8 +289,63 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', authRequired, (req, res) => {
   const u = req.user;
-  return res.json({ user: { id: u.sub, email: u.email, name: u.name, role: u.role } });
+  return res.json({
+    user: {
+      id: u.sub,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      isVerified: u.emailVerified !== false
+    }
+  });
 });
+
+const verifyEmailQuerySchema = z.object({
+  token: z.string().min(8).max(128)
+});
+
+app.get('/api/auth/verify', async (req, res) => {
+  const parsed = verifyEmailQuerySchema.safeParse({ token: req.query.token });
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Enlace de verificación inválido.' });
+  }
+  const { token } = parsed.data;
+  let ok = false;
+  await dbReadWrite(async (db) => {
+    const user = (db.data.users || []).find(u => u.verificationToken === token);
+    if (!user) return;
+    user.isVerified = true;
+    user.verificationToken = null;
+    ok = true;
+  });
+  if (!ok) {
+    return res.status(400).json({ error: 'Enlace inválido o ya utilizado.' });
+  }
+  const base = String(FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+  return res.redirect(302, `${base}/frontend/index.html?verified=1`);
+});
+
+/** Envía enlace GET /api/auth/verify?token=… usando SMTP configurado (getTransport). */
+async function sendVerificationEmail(toEmail, verificationToken) {
+  const transport = getTransport();
+  if (!transport) {
+    if (isDev) {
+      const base = (process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+      console.warn('[register] SMTP no configurado. Enlace de verificación (solo dev):', `${base}/api/auth/verify?token=${verificationToken}`);
+    }
+    return false;
+  }
+  const base = (process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+  const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
+  await transport.sendMail({
+    from: process.env.SMTP_USER,
+    to: toEmail,
+    subject: 'Verifica tu cuenta en ProyectWeb',
+    text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
+    html: `<p>Hola,</p><p>Confirma tu correo pulsando el siguiente enlace:</p><p><a href="${verifyUrl}">Verificar mi cuenta</a></p><p>Si no creaste esta cuenta, ignora este mensaje.</p>`
+  });
+  return true;
+}
 
 // ---- Uploads ----
 const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -814,7 +917,15 @@ app.get('/api/admin/export', authRequired, adminRequired, async (req, res) => {
 
 // ---- Admin users ----
 function mapUser(u) {
-  return { id: u.id, email: u.email, name: u.name, role: u.role || 'CLIENT', active: u.active !== false, created_at: u.created_at };
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    role: u.role || 'CLIENT',
+    active: u.active !== false,
+    isVerified: u.isVerified !== false,
+    created_at: u.created_at
+  };
 }
 
 /** Elimina password_hash / password en cualquier nivel (exportaciones, objetos anidados). */
@@ -823,7 +934,7 @@ function stripSensitiveFields(value) {
   if (value && typeof value === 'object') {
     const out = {};
     for (const [k, v] of Object.entries(value)) {
-      if (k === 'password_hash' || k === 'password') continue;
+      if (k === 'password_hash' || k === 'password' || k === 'verificationToken') continue;
       out[k] = stripSensitiveFields(v);
     }
     return out;
@@ -861,6 +972,8 @@ app.post('/api/admin/users', authRequired, adminRequired, async (req, res) => {
       password_hash: bcrypt.hashSync(password, 10),
       role: role,
       active: true,
+      isVerified: true,
+      verificationToken: null,
       created_at: nowISO()
     };
     db.data.users.push(user);
@@ -979,6 +1092,8 @@ app.post('/api/dev/seed', async (req, res) => {
         name: 'Admin',
         password_hash: bcrypt.hashSync('admin123', 10),
         role: 'ADMIN',
+        isVerified: true,
+        verificationToken: null,
         created_at: nowISO()
       });
     }
