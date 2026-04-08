@@ -168,48 +168,56 @@ app.post('/api/auth/register', async (req, res) => {
   const name = (typeof nameRaw === 'string' && nameRaw.trim()) ? nameRaw.trim() : ((email || '').split('@')[0] || email || '');
 
   try {
-    let created = null;
-    await dbReadWrite(async (db) => {
-      const exists = db.data.users.find(u => u.email === email);
-      if (exists) {
-        created = { conflict: true };
-        return;
-      }
-
-      const verificationToken = nanoid();
-      const user = {
-        id: nanoid(),
-        email,
-        name,
-        password_hash: bcrypt.hashSync(password, 10),
-        role: 'CLIENT',
-        isVerified: false,
-        verificationToken,
-        created_at: nowISO()
-      };
-      db.data.users.push(user);
-      created = { user };
-    });
-
-    if (created && created.conflict) {
+    const db = await dbPromise;
+    await db.read();
+    db.data ||= { users: [], products: [], orders: [], contact_messages: [], mp_notifications: [] };
+    const exists = (db.data.users || []).find(u => u.email === email);
+    if (exists) {
       return res.status(409).json({ error: 'El correo ya está registrado' });
     }
-    if (!created || !created.user) {
-      return res.status(500).json({ error: 'Error interno del servidor' });
-    }
+
+    const verificationToken = nanoid();
+    const user = {
+      id: nanoid(),
+      email,
+      name,
+      password_hash: bcrypt.hashSync(password, 10),
+      role: 'CLIENT',
+      isVerified: false,
+      verificationToken,
+      created_at: nowISO()
+    };
 
     try {
-      await sendVerificationEmail(created.user.email, created.user.verificationToken);
+      await sendVerificationEmail(user.email, verificationToken);
     } catch (mailErr) {
-      console.error('[register] correo de verificación:', mailErr.message);
+      console.error('[register] SMTP:', mailErr && mailErr.message, mailErr && mailErr.code);
+      const mapped = mapMailErrorToHttp(mailErr);
+      return res.status(mapped.status).json({
+        error: mapped.message,
+        code: mapped.code
+      });
+    }
+
+    let raceConflict = false;
+    await dbReadWrite(async (dbInner) => {
+      if ((dbInner.data.users || []).some(u => u.email === email)) {
+        raceConflict = true;
+        return;
+      }
+      dbInner.data.users.push(user);
+    });
+
+    if (raceConflict) {
+      return res.status(409).json({ error: 'El correo ya está registrado' });
     }
 
     return res.status(201).json({
       user: {
-        id: created.user.id,
-        email: created.user.email,
-        name: created.user.name,
-        role: created.user.role,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
         isVerified: false
       },
       message: 'Registro exitoso. Revisa tu correo y pulsa el enlace para verificar tu cuenta antes de iniciar sesión.'
@@ -325,26 +333,84 @@ app.get('/api/auth/verify', async (req, res) => {
   return res.redirect(302, `${base}/frontend/index.html?verified=1`);
 });
 
-/** Envía enlace GET /api/auth/verify?token=… usando SMTP configurado (getTransport). */
+/** Lee variables de entorno sin espacios accidentales (salvo que se documente lo contrario). */
+function readEnvTrim(name) {
+  const v = process.env[name];
+  if (v == null) return '';
+  return String(v).trim();
+}
+
+/**
+ * Cliente SMTP orientado a Gmail / Render: puerto 587 (STARTTLS), timeouts cortos, TLS flexible en el servidor.
+ */
+function getTransport() {
+  const host = readEnvTrim('SMTP_HOST');
+  const user = readEnvTrim('SMTP_USER');
+  const pass = process.env.SMTP_PASS != null ? String(process.env.SMTP_PASS).trim() : '';
+  if (!host || !user || !pass) return null;
+
+  const port = 587;
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: false,
+    requireTLS: true,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
+    tls: { rejectUnauthorized: false },
+    auth: { user, pass }
+  });
+}
+
+/** URL pública del API (obligatoria en producción) para enlaces del correo de verificación. */
+function getBackendPublicUrlForVerification() {
+  const explicit = readEnvTrim('BACKEND_PUBLIC_URL');
+  if (explicit) return explicit.replace(/\/$/, '');
+  if (isDev) return `http://localhost:${PORT}`.replace(/\/$/, '');
+  const err = new Error('BACKEND_PUBLIC_URL no está definida');
+  err.code = 'BACKEND_PUBLIC_URL_MISSING';
+  throw err;
+}
+
+/** Traduce fallos de nodemailer / red a HTTP 503 (servicio correo) o 504 (timeout). */
+function mapMailErrorToHttp(err) {
+  const c = err && err.code;
+  const msg = (err && err.message) || '';
+  if (c === 'SMTP_NOT_CONFIGURED') {
+    return { status: 503, message: 'Correo no configurado. Define SMTP_HOST, SMTP_USER y SMTP_PASS.', code: 'SMTP_NOT_CONFIGURED' };
+  }
+  if (c === 'BACKEND_PUBLIC_URL_MISSING') {
+    return { status: 503, message: 'Configura BACKEND_PUBLIC_URL en el servidor (URL pública del backend).', code: 'BACKEND_PUBLIC_URL_MISSING' };
+  }
+  if (c === 'ETIMEDOUT' || c === 'ESOCKETTIMEDOUT' || /timeout/i.test(msg)) {
+    return { status: 504, message: 'Tiempo de espera al conectar con el servidor de correo. Inténtalo de nuevo.', code: 'SMTP_TIMEOUT' };
+  }
+  if (c === 'ECONNRESET' || c === 'ECONNREFUSED' || c === 'ENOTFOUND' || c === 'EAI_AGAIN') {
+    return { status: 503, message: 'No se pudo conectar al servidor de correo. Revisa red y credenciales SMTP.', code: 'SMTP_CONNECTION' };
+  }
+  return { status: 503, message: 'No se pudo enviar el correo de verificación. Inténtalo más tarde.', code: 'SMTP_SEND_FAILED' };
+}
+
+/** Envía enlace GET /api/auth/verify?token=… (usa BACKEND_PUBLIC_URL para el href). */
 async function sendVerificationEmail(toEmail, verificationToken) {
   const transport = getTransport();
   if (!transport) {
-    if (isDev) {
-      const base = (process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
-      console.warn('[register] SMTP no configurado. Enlace de verificación (solo dev):', `${base}/api/auth/verify?token=${verificationToken}`);
-    }
-    return false;
+    const e = new Error('SMTP no configurado');
+    e.code = 'SMTP_NOT_CONFIGURED';
+    throw e;
   }
-  const base = (process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+
+  const base = getBackendPublicUrlForVerification();
   const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
+  const fromAddr = readEnvTrim('SMTP_USER');
   await transport.sendMail({
-    from: process.env.SMTP_USER,
+    from: fromAddr,
     to: toEmail,
     subject: 'Verifica tu cuenta en ProyectWeb',
     text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
     html: `<p>Hola,</p><p>Confirma tu correo pulsando el siguiente enlace:</p><p><a href="${verifyUrl}">Verificar mi cuenta</a></p><p>Si no creaste esta cuenta, ignora este mensaje.</p>`
   });
-  return true;
 }
 
 // ---- Uploads ----
@@ -1033,16 +1099,6 @@ const contactSchema = z.object({
   message: z.string().min(3).max(3000)
 });
 
-function getTransport(){
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secure = String(process.env.SMTP_SECURE || 'false') === 'true';
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !user || !pass) return null;
-  return nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
-}
-
 app.post('/api/contact', async (req, res) => {
   const parsed = contactSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
@@ -1052,7 +1108,7 @@ app.post('/api/contact', async (req, res) => {
     db.data.contact_messages.push({ id: nanoid(), name, email, message, created_at: nowISO() });
   });
 
-  const to = process.env.CONTACT_TO;
+  const to = readEnvTrim('CONTACT_TO');
   const transport = getTransport();
   if (!to || !transport) {
     return res.status(503).json({ error: 'Correo no configurado. Configura CONTACT_TO y SMTP_* en .env' });
@@ -1060,7 +1116,7 @@ app.post('/api/contact', async (req, res) => {
 
   try {
     await transport.sendMail({
-      from: process.env.SMTP_USER,
+      from: readEnvTrim('SMTP_USER'),
       to,
       subject: `Contacto ProyectWeb — ${name}`,
       replyTo: email,
@@ -1069,7 +1125,8 @@ app.post('/api/contact', async (req, res) => {
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('contact email error', err);
-    return res.status(500).json({ error: 'No se pudo enviar el correo. Revisa la configuración SMTP.' });
+    const mapped = mapMailErrorToHttp(err);
+    return res.status(mapped.status).json({ error: mapped.message, code: mapped.code });
   }
 });
 
