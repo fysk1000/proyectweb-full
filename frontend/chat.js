@@ -20,6 +20,16 @@
   const TYPEWRITER_DELAY_MS = 28;
   const ADMIN_EMAIL = 'admin@proyectweb.local';
 
+  function escapeHtmlAttr(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  }
+
+  const CHAT_TOGGLE_LABEL_OPEN = 'Abrir asistente de ventas';
+  const CHAT_TOGGLE_LABEL_CLOSE = 'Cerrar asistente de ventas';
+
   let currentChatAbortController = null;
 
   const API = window.ProyectWebAPI;
@@ -159,8 +169,8 @@
     const welcomeWrap = document.createElement('div');
     welcomeWrap.className = 'chat-bubble-wrap chat-bubble-bot flex gap-2 items-start animate-fade-in';
     welcomeWrap.innerHTML =
-      '<span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0">' +
-      '<i class="fa-solid fa-robot"></i></span>' +
+      '<span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0" aria-hidden="true">' +
+      '<i class="fa-solid fa-robot" aria-hidden="true"></i></span>' +
       '<div class="chat-bubble max-w-[85%] px-3 py-2.5 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm text-slate-700 text-sm break-words">' +
       '<p id="chat-welcome-msg" class="chat-bubble-text m-0 break-words"></p></div>';
     messagesEl.appendChild(welcomeWrap);
@@ -190,10 +200,12 @@
       panel.classList.remove('chat-panel-open');
       panel.setAttribute('aria-hidden', 'true');
       toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', CHAT_TOGGLE_LABEL_OPEN);
       setTimeout(function() {
         panel.classList.add('chat-panel-open');
         panel.setAttribute('aria-hidden', 'false');
         toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', CHAT_TOGGLE_LABEL_CLOSE);
         addWelcomeBubble();
         setWelcomeMessage();
         getContext().then(function(c) { renderQuickReplies(c.role); });
@@ -377,7 +389,8 @@
     wrap.className = 'chat-bubble-wrap ' + (isUser ? 'chat-bubble-user' : 'chat-bubble-bot') + ' flex gap-2 items-start animate-fade-in';
     const avatar = document.createElement('span');
     avatar.className = 'chat-avatar w-8 h-8 rounded-full flex items-center justify-center text-sm text-white shrink-0 ' + (isUser ? 'bg-slate-500' : 'bg-indigo-600');
-    avatar.innerHTML = isUser ? '<i class="fa-solid fa-user"></i>' : '<i class="fa-solid fa-robot"></i>';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.innerHTML = isUser ? '<i class="fa-solid fa-user" aria-hidden="true"></i>' : '<i class="fa-solid fa-robot" aria-hidden="true"></i>';
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble max-w-[85%] px-3 py-2.5 rounded-2xl text-sm break-words ' + (isUser ? 'rounded-br-md bg-indigo-600 text-white' : 'rounded-bl-md bg-white border border-slate-200 shadow-sm text-slate-700');
     const p = document.createElement('p');
@@ -429,7 +442,7 @@
     if (!messagesEl) return;
     const wrap = document.createElement('div');
     wrap.className = 'chat-bubble-wrap chat-bubble-bot flex gap-2 items-start animate-fade-in';
-    wrap.innerHTML = '<span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot"></i></span>';
+    wrap.innerHTML = '<span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0" aria-hidden="true"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>';
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble chat-bubble-cards max-w-full px-3 py-2 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm text-sm break-words';
     const list = document.createElement('div');
@@ -441,12 +454,14 @@
       const imgUrl = getProductImageUrl(p);
       const safeName = (p.name || 'Producto').replace(/</g, '&lt;').replace(/"/g, '&quot;');
       const safeId = (p.id || '').replace(/"/g, '&quot;');
+      const imgAlt = escapeHtmlAttr('Imagen de ' + (p.name || 'producto'));
+      const addLabel = escapeHtmlAttr('Añadir ' + (p.name || 'producto') + ' al carrito');
       card.innerHTML =
-        (imgUrl ? '<img src="' + imgUrl + '" alt="" class="w-12 h-12 object-cover rounded-lg shrink-0" onerror="this.style.display=\'none\'">' : '') +
+        (imgUrl ? '<img src="' + imgUrl + '" alt="' + imgAlt + '" class="w-12 h-12 object-cover rounded-lg shrink-0" onerror="this.style.display=\'none\'">' : '') +
         '<div class="flex-1 min-w-0">' +
         '<p class="font-semibold text-slate-900 m-0 mb-0.5">' + safeName + '</p>' +
         '<p class="text-indigo-600 font-semibold text-xs m-0 mb-1">' + formatPrice(p.price) + '</p>' +
-        '<button type="button" class="chat-product-card-add btn btn-primary btn-sm text-xs" data-product-id="' + safeId + '">Añadir</button>' +
+        '<button type="button" class="chat-product-card-add btn btn-primary btn-sm text-xs" data-product-id="' + safeId + '" aria-label="' + addLabel + '">Añadir</button>' +
         '</div>';
       list.appendChild(card);
     });
@@ -962,7 +977,7 @@
     ];
     const wrap = document.createElement('div');
     wrap.className = 'chat-bubble-wrap chat-bubble-bot flex gap-2 items-start animate-fade-in';
-    wrap.innerHTML = '<span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot"></i></span>';
+    wrap.innerHTML = '<span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0" aria-hidden="true"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>';
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble max-w-full px-3 py-2 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm text-sm break-words';
     const box = document.createElement('div');
@@ -1734,8 +1749,9 @@
       toggle.addEventListener('click', function() {
         const isOpen = panel.classList.contains('chat-panel-open');
         panel.classList.toggle('chat-panel-open', !isOpen);
-        panel.setAttribute('aria-hidden', isOpen);
-        toggle.setAttribute('aria-expanded', !isOpen);
+        panel.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+        toggle.setAttribute('aria-expanded', String(!isOpen));
+        toggle.setAttribute('aria-label', !isOpen ? CHAT_TOGGLE_LABEL_CLOSE : CHAT_TOGGLE_LABEL_OPEN);
         if (!isOpen) {
           validateSessionAndResetIfNeeded();
           setTimeout(() => input && input.focus(), 300);
@@ -1746,7 +1762,10 @@
       closeBtn.addEventListener('click', function() {
         panel.classList.remove('chat-panel-open');
         panel.setAttribute('aria-hidden', 'true');
-        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.setAttribute('aria-label', CHAT_TOGGLE_LABEL_OPEN);
+        }
       });
     }
     const resetBtn = document.getElementById('chat-reset-conversation');

@@ -10,9 +10,15 @@
 :root {
   --color-primary: #4f46e5;
   --color-primary-hover: #4338ca;
+  --color-focus-ring: #4338ca;
   --radius: 0.5rem;
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Base rem: 1rem = tamaño raíz del navegador (normalmente 16px) */
+html {
+  font-size: 100%;
 }
 
 * {
@@ -21,9 +27,49 @@
 
 body {
   font-family: 'Outfit', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Enlace “Saltar al contenido”: visible solo con foco de teclado (WCAG 2.4.1) */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10001;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #0f172a;
+  border: 2px solid #6366f1;
+  border-radius: 0 0 0.375rem 0;
+  text-decoration: none;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2);
+}
+.skip-link:focus {
+  position: fixed;
+  left: 0.5rem;
+  top: 0.5rem;
+  outline: none;
+}
+.skip-link:focus-visible {
+  outline: 3px solid #a5b4fc;
+  outline-offset: 2px;
+}
+
+/* Foco visible en enlaces y controles (WCAG 2.4.7); .btn define su propio anillo */
+a:focus-visible:not(.skip-link):not(.btn),
+.nav-link:focus-visible,
+button:focus-visible:not(.btn):not(.skip-link),
+input:focus-visible:not(.input-field),
+textarea:focus-visible:not(.input-field),
+select:focus-visible:not(.input-field) {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 main {
@@ -50,6 +96,11 @@ main {
 .nav-link:hover {
   color: #4f46e5;
 }
+.nav-link:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
 
 .badge-cart {
   position: absolute;
@@ -73,23 +124,24 @@ main {
   justify-content: center;
   padding: 0.625rem 1.25rem;
   font-weight: 500;
+  font-size: 1rem;
   border-radius: 0.5rem;
   transition: background-color 0.2s, color 0.2s;
   outline: none;
 }
-.btn:focus {
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #4f46e5;
+.btn:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #4f46e5;
 }
 
 .btn-primary {
   background-color: #4f46e5;
-  color: white;
+  color: #ffffff;
 }
 .btn-primary:hover {
   background-color: #4338ca;
 }
-.btn-primary:focus {
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #6366f1;
+.btn-primary:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #6366f1;
 }
 
 .btn-secondary {
@@ -99,8 +151,8 @@ main {
 .btn-secondary:hover {
   background-color: #cbd5e1;
 }
-.btn-secondary:focus {
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #94a3b8;
+.btn-secondary:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #64748b;
 }
 
 .btn-outline {
@@ -111,8 +163,8 @@ main {
 .btn-outline:hover {
   background-color: #eef2ff;
 }
-.btn-outline:focus {
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #6366f1;
+.btn-outline:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #6366f1;
 }
 
 .btn-sm {
@@ -145,8 +197,10 @@ main {
 }
 
 .product-card-title {
+  font-size: 1rem;
   font-weight: 600;
   color: #0f172a;
+  margin: 0;
 }
 
 .product-card-price {
@@ -318,7 +372,7 @@ main {
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.input-field:focus {
+.input-field:focus-visible {
   border-color: #6366f1;
   box-shadow: 0 0 0 2px rgb(99 102 241 / 0.2);
 }
@@ -337,6 +391,19 @@ main {
 }
 .footer-section a:hover {
   text-decoration: underline;
+}
+.footer-section a:focus-visible {
+  outline: 2px solid #cbd5e1;
+  outline-offset: 3px;
+  border-radius: 0.125rem;
+}
+
+/* Controles del carrito generados por script */
+.cart-qty-btn:focus-visible,
+.cart-remove:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
 }
 
 /* Toast */
@@ -708,7 +775,7 @@ html {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.chat-input:focus {
+.chat-input:focus-visible {
   border-color: #6366f1;
   box-shadow: 0 0 0 2px rgb(99 102 241 / 0.2);
 }
@@ -754,7 +821,18 @@ html {
   box-shadow: 0 6px 20px rgb(79 70 229 / 0.45);
 }
 
-.chat-toggle:focus {
+.chat-toggle:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.5);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.55), 0 0 0 6px rgba(255, 255, 255, 0.95);
+}
+
+.quick-reply-btn:focus-visible,
+.chat-suggestion-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.chat-send-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }

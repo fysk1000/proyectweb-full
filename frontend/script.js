@@ -40,6 +40,14 @@ const App = (function() {
   const priceFormat = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
   function formatPrice(num) { return priceFormat.format(Number(num)); }
 
+  /** Texto seguro para atributos HTML (alt, aria-label, etc.) */
+  function escapeHtmlAttr(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  }
+
   const DEFAULT_PRODUCTS = [
     { id: '1', name: 'Auriculares inalámbricos', price: 49.99, description: 'Sonido envolvente y cancelación de ruido. Hasta 20h de batería.', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop' },
     { id: '2', name: 'Teclado mecánico RGB', price: 89.99, description: 'Switches mecánicos, retroiluminación RGB y reposamuñecas magnético.', image: 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=400&h=300&fit=crop' },
@@ -527,17 +535,19 @@ const App = (function() {
     listEl.innerHTML = cart.map(item => {
       const product = productMap[item.id];
       const img = product ? product.image : DEFAULT_PRODUCT_IMAGE;
+      const nameEsc = escapeHtmlAttr(item.name || 'Producto');
+      const imgAlt = escapeHtmlAttr(`Imagen de ${item.name || 'producto'}`);
       return `
         <div class="cart-drawer-item" data-id="${item.id}">
-          <img src="${img}" alt="" class="cart-drawer-item-img" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">
+          <img src="${img}" alt="${imgAlt}" class="cart-drawer-item-img" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">
           <div class="cart-drawer-item-body">
             <p class="font-medium text-slate-900 text-sm">${item.name}</p>
             <p class="text-indigo-600 font-semibold text-sm">${formatPrice(item.price)} × ${item.quantity}</p>
             <div class="flex items-center gap-2 mt-1">
-              <button type="button" class="cart-qty-btn text-slate-500 hover:text-slate-700 text-sm" data-id="${item.id}" data-delta="-1">−</button>
+              <button type="button" class="cart-qty-btn text-slate-500 hover:text-slate-700 text-sm" data-id="${item.id}" data-delta="-1" aria-label="Disminuir cantidad de ${nameEsc}">−</button>
               <span class="text-sm font-medium">${item.quantity}</span>
-              <button type="button" class="cart-qty-btn text-slate-500 hover:text-slate-700 text-sm" data-id="${item.id}" data-delta="1">+</button>
-              <button type="button" class="cart-remove ml-2 text-red-600 text-sm hover:underline" data-id="${item.id}">Quitar</button>
+              <button type="button" class="cart-qty-btn text-slate-500 hover:text-slate-700 text-sm" data-id="${item.id}" data-delta="1" aria-label="Aumentar cantidad de ${nameEsc}">+</button>
+              <button type="button" class="cart-remove ml-2 text-red-600 text-sm hover:underline" data-id="${item.id}" aria-label="Quitar ${nameEsc} del carrito">Quitar</button>
             </div>
           </div>
         </div>
@@ -843,14 +853,15 @@ const App = (function() {
     }
     container.innerHTML = PRODUCTS.map(p => {
       const imgSrc = p.image || DEFAULT_PRODUCT_IMAGE;
+      const altText = escapeHtmlAttr(p.name ? `Fotografía de ${p.name}` : 'Producto del catálogo');
       return `
       <article class="product-card">
-        <img src="${imgSrc}" alt="${(p.name || '').replace(/"/g, '&quot;')}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">
+        <img src="${imgSrc}" alt="${altText}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">
         <div class="p-4">
-          <p class="product-card-title">${p.name}</p>
+          <h3 class="product-card-title">${p.name}</h3>
           <p class="product-card-price">${formatPrice(p.price)}</p>
           <p class="product-card-desc">${p.description}</p>
-          <button type="button" class="btn btn-primary btn-sm w-full mt-3 add-to-cart" data-id="${p.id}">Añadir al carrito</button>
+          <button type="button" class="btn btn-primary btn-sm w-full mt-3 add-to-cart" data-id="${p.id}" aria-label="${escapeHtmlAttr(`Añadir ${p.name || 'producto'} al carrito`)}">Añadir al carrito</button>
         </div>
       </article>
     `;

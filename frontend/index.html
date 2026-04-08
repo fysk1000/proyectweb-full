@@ -17,9 +17,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="font-outfit antialiased bg-slate-50 text-slate-800">
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
   <!-- Navbar sticky: Mobile First (menú hamburguesa en móvil, enlaces en md+) -->
   <header class="header sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
-    <nav class="container mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+    <nav class="container mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between" aria-label="Principal">
       <a href="#inicio" class="text-lg sm:text-xl font-semibold text-slate-800 hover:text-indigo-600 transition">ProyectWeb</a>
       <ul class="hidden md:flex items-center gap-6 lg:gap-8">
         <li><a href="#inicio" class="nav-link">Inicio</a></li>
@@ -31,15 +32,15 @@
         <button type="button" id="btn-login" class="btn btn-primary btn-sm hidden md:inline-flex" aria-label="Iniciar sesión">Login</button>
         <span id="nav-hola-cliente" class="auth-hidden md:inline-flex items-center gap-2">
           <span class="text-slate-600 text-sm font-medium">Hola, Cliente</span>
-          <button type="button" id="btn-logout" class="text-slate-500 hover:text-red-600 text-xs">Salir</button>
+          <button type="button" id="btn-logout" class="text-slate-500 hover:text-red-600 text-xs" aria-label="Cerrar sesión">Salir</button>
         </span>
         <button type="button" id="btn-cart" class="relative p-2 rounded-lg hover:bg-slate-100 transition" aria-label="Carrito">
-          <i class="fa-solid fa-cart-shopping text-slate-700 text-xl"></i>
+          <i class="fa-solid fa-cart-shopping text-slate-700 text-xl" aria-hidden="true"></i>
           <span id="cart-count" class="badge-cart absolute -top-1 -right-1">0</span>
         </button>
       </div>
       <button type="button" id="menu-toggle" class="md:hidden p-2 rounded-lg hover:bg-slate-100" aria-label="Menú">
-        <i class="fa-solid fa-bars text-xl text-slate-700"></i>
+        <i class="fa-solid fa-bars text-xl text-slate-700" aria-hidden="true"></i>
       </button>
     </nav>
     <div id="mobile-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-4 py-3">
@@ -48,11 +49,11 @@
       <a href="#nosotros" class="block py-2 text-slate-700 hover:text-indigo-600">Nosotros</a>
       <a href="#contacto" class="block py-2 text-slate-700 hover:text-indigo-600">Contacto</a>
       <button type="button" id="btn-login-mobile" class="block w-full text-left py-2 text-slate-700 hover:text-indigo-600 auth-visible">Login</button>
-      <div class="auth-hidden pt-2" id="nav-hola-cliente-mobile"><span class="text-slate-600 font-medium">Hola, Cliente</span> <button type="button" id="btn-logout-mobile" class="text-red-600 text-sm ml-2">Salir</button></div>
+      <div class="auth-hidden pt-2" id="nav-hola-cliente-mobile"><span class="text-slate-600 font-medium">Hola, Cliente</span> <button type="button" id="btn-logout-mobile" class="text-red-600 text-sm ml-2" aria-label="Cerrar sesión">Salir</button></div>
     </div>
   </header>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <!-- Sección Inicio: espaciado y tipografía responsivos (base = móvil) -->
     <section id="inicio" class="hero-section py-12 sm:py-16 md:py-24 lg:py-28 scroll-mt-16">
       <div class="container mx-auto px-4 sm:px-6 text-center">
@@ -292,17 +293,17 @@
   <!-- Footer con redes sociales -->
   <footer id="footer" class="footer-section py-10 bg-slate-900 text-slate-300">
     <div class="container mx-auto px-4 text-center">
-      <p class="text-sm mb-4">© 2025 ProyectWeb. Proyecto multi-página HTML5 + Tailwind + JS.</p>
-      <nav class="flex justify-center gap-6 text-sm mb-4">
+      <p class="text-sm mb-4 text-slate-300">© 2026 ProyectWeb. Proyecto multi-página HTML5 + Tailwind + JS.</p>
+      <nav class="flex justify-center gap-6 text-sm mb-4" aria-label="Pie de página">
         <a href="#inicio" class="hover:text-white transition">Inicio</a>
         <a href="#catalogo" class="hover:text-white transition">Catálogo</a>
         <a href="#nosotros" class="hover:text-white transition">Nosotros</a>
         <a href="#contacto" class="hover:text-white transition">Contacto</a>
       </nav>
       <div class="flex justify-center gap-4 text-xl">
-        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
-        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
-        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Facebook"><i class="fa-brands fa-facebook" aria-hidden="true"></i></a>
+        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition" aria-label="Twitter"><i class="fa-brands fa-twitter" aria-hidden="true"></i></a>
       </div>
     </div>
   </footer>
@@ -312,7 +313,7 @@
     <div class="modal-box" role="dialog" aria-labelledby="login-modal-title">
       <div class="flex justify-between items-center mb-6">
         <h2 id="login-modal-title" class="text-xl font-semibold text-slate-900">Iniciar sesión</h2>
-        <button type="button" id="login-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+        <button type="button" id="login-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
       </div>
       <form id="login-form">
         <div class="mb-4">
@@ -335,7 +336,7 @@
     <div class="modal-box" role="dialog" aria-labelledby="register-modal-title">
       <div class="flex justify-between items-center mb-6">
         <h2 id="register-modal-title" class="text-xl font-semibold text-slate-900">Crear cuenta</h2>
-        <button type="button" id="register-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+        <button type="button" id="register-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
       </div>
       <form id="register-form">
         <div class="mb-4">
@@ -361,7 +362,7 @@
     <div class="modal-box max-w-2xl" role="dialog" aria-labelledby="product-modal-title">
       <div class="flex justify-between items-center mb-6">
         <h2 id="product-modal-title" class="text-xl font-semibold text-slate-900">Nuevo Producto</h2>
-        <button type="button" id="product-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+        <button type="button" id="product-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
       </div>
       <form id="product-form">
         <input type="hidden" id="product-id" name="id">
@@ -398,7 +399,7 @@
             </div>
           </div>
           <div id="product-image-preview" class="mt-3 hidden product-image-preview-box">
-            <img id="product-image-preview-img" src="" alt="Vista previa" class="product-image-preview-img">
+            <img id="product-image-preview-img" src="" alt="Vista previa de la imagen del producto seleccionado" class="product-image-preview-img">
           </div>
         </div>
         </div>
@@ -415,7 +416,7 @@
     <div class="modal-box max-w-md" role="dialog" aria-labelledby="user-modal-title">
       <div class="flex justify-between items-center mb-6">
         <h2 id="user-modal-title" class="text-xl font-semibold text-slate-900">Nuevo usuario</h2>
-        <button type="button" id="user-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+        <button type="button" id="user-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
       </div>
       <form id="user-form">
         <input type="hidden" id="user-id" name="id">
@@ -451,7 +452,7 @@
     <div class="modal-box max-w-lg" role="dialog" aria-labelledby="order-detail-title">
       <div class="flex justify-between items-center mb-4">
         <h2 id="order-detail-title" class="text-xl font-semibold text-slate-900">Detalle del pedido</h2>
-        <button type="button" id="order-detail-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+        <button type="button" id="order-detail-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
       </div>
       <div id="order-detail-content" class="text-sm text-slate-700 space-y-3"></div>
     </div>
@@ -462,7 +463,7 @@
   <aside id="cart-drawer" class="cart-drawer" aria-label="Carrito de compras">
     <div class="cart-drawer-header">
       <h2 class="text-lg font-semibold text-slate-900">Carrito</h2>
-      <button type="button" id="cart-drawer-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar carrito"><i class="fa-solid fa-times"></i></button>
+      <button type="button" id="cart-drawer-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar carrito"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
     </div>
     <div id="cart-drawer-list" class="cart-drawer-list">
       <!-- Lista de productos por JS -->
@@ -478,7 +479,7 @@
     <div class="modal-box checkout-modal-box w-full py-4 px-4 sm:py-6 sm:px-6" role="dialog" aria-labelledby="checkout-modal-title">
       <div class="flex justify-between items-center mb-4 shrink-0">
         <h2 id="checkout-modal-title" class="text-xl sm:text-2xl font-semibold text-slate-900">Finalizar compra</h2>
-        <button type="button" id="checkout-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+        <button type="button" id="checkout-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
       </div>
       <div id="checkout-summary" class="mb-4 p-4 bg-slate-50 rounded-lg text-sm text-slate-700"></div>
       <p id="checkout-payment-badge" class="hidden mb-3 text-sm font-medium text-indigo-700 bg-indigo-50 px-3 py-2 rounded">Método de pago: Stripe</p>
@@ -511,7 +512,7 @@
   <!-- Modal compra exitosa -->
   <div id="purchase-success-modal" class="modal-overlay hidden" aria-hidden="true">
     <div class="modal-box max-w-sm text-center" role="dialog" aria-labelledby="purchase-success-title">
-      <p id="purchase-success-title" class="text-2xl font-semibold text-slate-900 mb-2">✅ Compra realizada</p>
+      <h2 id="purchase-success-title" class="text-2xl font-semibold text-slate-900 mb-2"><span aria-hidden="true">✅ </span>Compra realizada</h2>
       <p id="purchase-success-demo-banner" class="hidden text-amber-600 font-medium text-sm mb-2">MODO DEMO</p>
       <p class="text-slate-600 mb-1">Pedido: <strong id="purchase-success-order-id">—</strong></p>
       <p class="text-slate-600 mb-1">Total: <strong id="purchase-success-total" class="text-indigo-600">—</strong></p>
@@ -536,7 +537,7 @@
     <div class="modal-box max-w-md" role="dialog" aria-labelledby="mp-info-title">
       <div class="flex items-center justify-between mb-4">
         <h2 id="mp-info-title" class="text-xl font-semibold text-slate-900">💳 Pagar con Stripe</h2>
-        <button type="button" id="mp-info-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times"></i></button>
+        <button type="button" id="mp-info-modal-close" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-times" aria-hidden="true"></i></button>
       </div>
       <div class="modal-content text-slate-700 text-sm space-y-3">
         <p>1️⃣ Agrega productos al carrito.</p>
@@ -557,19 +558,19 @@
         </div>
         <div class="flex items-center gap-1 shrink-0">
           <span id="chat-offline-badge" class="hidden text-xs px-2 py-0.5 rounded bg-amber-500 text-white font-medium">Modo Offline</span>
-          <button type="button" id="chat-reset-conversation" class="p-2 rounded-lg hover:bg-indigo-500 transition text-white shrink-0" aria-label="Nueva conversación"><i class="fa-solid fa-trash"></i></button>
-          <button type="button" id="chat-panel-close" class="p-2 rounded-lg hover:bg-indigo-500 transition text-white shrink-0" aria-label="Cerrar chat"><i class="fa-solid fa-chevron-down"></i></button>
+          <button type="button" id="chat-reset-conversation" class="p-2 rounded-lg hover:bg-indigo-500 transition text-white shrink-0" aria-label="Nueva conversación"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+          <button type="button" id="chat-panel-close" class="p-2 rounded-lg hover:bg-indigo-500 transition text-white shrink-0" aria-label="Cerrar chat"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
         </div>
       </div>
       <div id="chat-messages" class="flex-1 min-h-[14rem] max-h-[22rem] overflow-y-auto p-4 bg-slate-50 flex flex-col gap-3 min-h-0">
         <div class="chat-bubble-wrap chat-bubble-bot flex gap-2 items-start animate-fade-in">
-          <span class="chat-avatar chat-avatar-bot w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot"></i></span>
+          <span class="chat-avatar chat-avatar-bot w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>
           <div class="chat-bubble chat-bubble-bot max-w-[85%] px-3 py-2.5 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm text-sm text-slate-700 break-words">
             <p id="chat-welcome-msg" class="chat-bubble-text m-0 break-words">Cargando...</p>
           </div>
         </div>
         <div id="chat-typing-indicator" class="hidden chat-bubble-wrap chat-bubble-bot flex gap-2 items-start animate-fade-in">
-          <span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot"></i></span>
+          <span class="chat-avatar w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm text-white shrink-0"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>
           <div class="px-3 py-2.5 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm text-sm text-slate-500 flex items-center gap-1">
             <span class="typing-dot w-2 h-2 rounded-full bg-slate-400 animate-typing-dot"></span>
             <span class="typing-dot w-2 h-2 rounded-full bg-slate-400 animate-typing-dot animation-delay-200"></span>
@@ -583,11 +584,11 @@
         </div>
         <form id="chat-form" class="flex gap-2 shrink-0">
           <input type="text" id="chat-input" class="flex-1 px-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Escribe tu mensaje..." autocomplete="off" maxlength="500" aria-label="Mensaje">
-          <button type="submit" class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition shrink-0" aria-label="Enviar"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+          <button type="submit" class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition shrink-0" aria-label="Enviar"><i class="fa-solid fa-paper-plane text-sm" aria-hidden="true"></i></button>
         </form>
       </div>
     </div>
-    <button type="button" id="chat-toggle" class="w-14 h-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center text-xl hover:bg-indigo-700 hover:scale-105 transition-all focus:outline-none focus:ring-4 focus:ring-indigo-300" aria-label="Abrir asistente" aria-expanded="false">
+    <button type="button" id="chat-toggle" class="w-14 h-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center text-xl hover:bg-indigo-700 hover:scale-105 transition-all focus:outline-none focus:ring-4 focus:ring-indigo-300" aria-label="Abrir asistente de ventas" aria-expanded="false">
       <i class="fa-solid fa-comments" aria-hidden="true"></i>
     </button>
   </div>
