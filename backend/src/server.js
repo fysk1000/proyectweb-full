@@ -12,10 +12,9 @@ import { nanoid } from 'nanoid';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
 import { z } from 'zod';
-import jwt from 'jsonwebtoken';
 
 import { openDb } from './db.js';
-import { signToken, authRequired, adminRequired } from './auth.js';
+import { signToken, authRequired, adminRequired, optionalBearerAuth } from './auth.js';
 import { createPreference, getPayment } from './mp.js';
 import chatRouter from './routes/chat.js';
 import Stripe from 'stripe';
@@ -144,7 +143,7 @@ app.get('/api/products', async (req, res) => {
   return res.json(products.map(mapProduct));
 });
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().transform(s => s.toLowerCase()),
   password: z.string().min(6),
   name: z.string().max(80).optional().default('')
 });
@@ -190,7 +189,10 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
+const loginSchema = z.object({
+  email: z.string().trim().email().transform(s => s.toLowerCase()),
+  password: z.string().min(1, 'La contraseña es obligatoria')
+});
 app.post('/api/auth/login', async (req, res) => {
   try {
     requireSecret();
@@ -503,7 +505,7 @@ app.post('/api/payments/mercadopago/preference', authRequired, async (req, res) 
 const orderSchema = z.object({
   customer: z.object({
     nombre: z.string().min(1).max(80),
-    email: z.string().email(),
+    email: z.string().trim().email().transform(s => s.toLowerCase()),
     telefono: z.string().min(6).max(30),
     direccion: z.string().min(5).max(300)
   }),
@@ -514,36 +516,15 @@ const orderSchema = z.object({
   paymentMethod: z.string().optional()
 });
 
-function tryGetUserId(req){
-  const h = req.headers.authorization || '';
-  if (!h.startsWith('Bearer ')) return null;
-  try {
-    const payload = jwt.verify(h.slice(7), process.env.JWT_SECRET);
-    return payload.sub;
-  } catch {
-    return null;
-  }
-}
-
-/** Si hay Bearer token válido devuelve { id, email }; si no, null (guest). */
-function tryGetUser(req) {
-  const h = req.headers.authorization || '';
-  if (!h.startsWith('Bearer ')) return null;
-  try {
-    const payload = jwt.verify(h.slice(7), process.env.JWT_SECRET);
-    return { id: payload.sub, email: payload.email || null };
-  } catch {
-    return null;
-  }
-}
-
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', optionalBearerAuth, async (req, res) => {
   const parsed = orderSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos' });
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
+  }
 
-  const user = tryGetUser(req);
-  const userId = user ? user.id : null;
-  const userEmail = user ? user.email : (parsed.data.customer && parsed.data.customer.email) || null;
+  const bearer = req.bearerUser;
+  const userId = bearer ? bearer.id : null;
+  const userEmail = bearer ? bearer.email : (parsed.data.customer && parsed.data.customer.email) || null;
   const { customer, items, paymentMethod } = parsed.data;
 
   const db = await dbPromise;
@@ -726,7 +707,7 @@ app.put('/api/admin/orders/:id/tracking', authRequired, adminRequired, async (re
   const body = req.body || {};
   const normalized = { carrier: body.carrier, tracking_number: body.tracking_number ?? body.number };
   const parsed = trackingSchema.safeParse(normalized);
-  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos' });
+  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
 
   const id = req.params.id;
   return dbReadWrite(async (db) => {
@@ -751,6 +732,9 @@ app.put('/api/admin/orders/:id/tracking', authRequired, adminRequired, async (re
 });
 
 // ---- Mercado Pago webhook (idempotente: stock se descuenta una sola vez) ----
+/** Webhook externo: cuerpo JSON arbitrario (objeto o array). */
+const mpWebhookBodySchema = z.union([z.record(z.string(), z.unknown()), z.array(z.unknown())]);
+
 function mapMpStatusToOrder(mpStatus) {
   const s = String(mpStatus || '').toLowerCase();
   if (s === 'approved') return 'APPROVED';
@@ -759,6 +743,10 @@ function mapMpStatusToOrder(mpStatus) {
 }
 
 app.post('/api/mp/webhook', express.json({ type: '*/*' }), async (req, res) => {
+  const parsedWebhook = mpWebhookBodySchema.safeParse(req.body ?? {});
+  if (!parsedWebhook.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsedWebhook.error.issues });
+  }
   const topic = req.query.topic || req.query.type || req.body?.type || 'unknown';
   const notificationId = req.query.id || req.body?.data?.id || req.body?.id || null;
   let paymentId = null;
@@ -820,13 +808,27 @@ app.get('/api/admin/export', authRequired, adminRequired, async (req, res) => {
   return res.json({
     exportedAt: nowISO(),
     products: (db.data.products || []).filter(p => p.active !== false).map(mapProduct),
-    orders: db.data.orders || []
+    orders: (db.data.orders || []).map(stripSensitiveFields)
   });
 });
 
 // ---- Admin users ----
 function mapUser(u) {
   return { id: u.id, email: u.email, name: u.name, role: u.role || 'CLIENT', active: u.active !== false, created_at: u.created_at };
+}
+
+/** Elimina password_hash / password en cualquier nivel (exportaciones, objetos anidados). */
+function stripSensitiveFields(value) {
+  if (Array.isArray(value)) return value.map(stripSensitiveFields);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (k === 'password_hash' || k === 'password') continue;
+      out[k] = stripSensitiveFields(v);
+    }
+    return out;
+  }
+  return value;
 }
 
 app.get('/api/admin/users', authRequired, adminRequired, async (req, res) => {
@@ -837,7 +839,7 @@ app.get('/api/admin/users', authRequired, adminRequired, async (req, res) => {
 });
 
 const createUserSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().transform(s => s.toLowerCase()),
   password: z.string().min(6, 'Mínimo 6 caracteres'),
   name: z.string().min(1).max(80),
   role: z.enum(['ADMIN', 'CLIENT']).default('CLIENT')
@@ -868,14 +870,14 @@ app.post('/api/admin/users', authRequired, adminRequired, async (req, res) => {
 
 const updateUserSchema = z.object({
   name: z.string().min(1).max(80).optional(),
-  email: z.string().email().optional(),
+  email: z.string().trim().email().transform(s => s.toLowerCase()).optional(),
   role: z.enum(['ADMIN', 'CLIENT']).optional(),
   active: z.boolean().optional()
 });
 
 app.put('/api/admin/users/:id', authRequired, adminRequired, async (req, res) => {
   const parsed = updateUserSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos' });
+  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
   const id = req.params.id;
   if (req.user.sub === id && parsed.data.active === false) {
     return res.status(403).json({ error: 'No puedes desactivar tu propia cuenta' });
@@ -901,7 +903,7 @@ const resetPasswordSchema = z.object({ newPassword: z.string().min(6, 'Mínimo 6
 
 app.post('/api/admin/users/:id/reset-password', authRequired, adminRequired, async (req, res) => {
   const parsed = resetPasswordSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos' });
+  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
   const id = req.params.id;
   return dbReadWrite(async (db) => {
     const user = (db.data.users || []).find(u => u.id === id);
@@ -930,7 +932,7 @@ function getTransport(){
 
 app.post('/api/contact', async (req, res) => {
   const parsed = contactSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos' });
+  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
   const { name, email, message } = parsed.data;
 
   await dbReadWrite(async (db) => {
@@ -959,8 +961,14 @@ app.post('/api/contact', async (req, res) => {
 });
 
 // ---- Seed (solo dev) ----
+const devSeedBodySchema = z.object({}).passthrough();
+
 app.post('/api/dev/seed', async (req, res) => {
   if ((process.env.NODE_ENV || 'development') === 'production') return res.status(404).end();
+  const parsedSeed = devSeedBodySchema.safeParse(req.body ?? {});
+  if (!parsedSeed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsedSeed.error.issues });
+  }
 
   return dbReadWrite(async (db) => {
     const adminEmail = 'admin@proyectweb.local';
@@ -994,7 +1002,10 @@ app.post('/api/dev/seed', async (req, res) => {
       }));
     }
 
-    return res.json({ ok: true, admin: { email: 'admin@proyectweb.local', password: 'admin123' } });
+    if (isDev) {
+      console.log('[dev/seed] Usuario admin: admin@proyectweb.local (contraseña por defecto en código de seed; no exponer en producción)');
+    }
+    return res.json({ ok: true, message: 'Datos de ejemplo cargados correctamente.' });
   });
 });
 

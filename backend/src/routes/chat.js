@@ -9,9 +9,19 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = express.Router();
+
+const chatBodySchema = z.object({
+  message: z.string().min(1, 'El mensaje no puede estar vacío').max(12000),
+  userContext: z.object({
+    role: z.string().max(24).optional(),
+    name: z.string().max(120).optional()
+  }).optional(),
+  token: z.string().max(8192).optional()
+});
 
 const groqApiKey = process.env.GROQ_API_KEY && String(process.env.GROQ_API_KEY).trim();
 const groqModel = process.env.GROQ_MODEL && String(process.env.GROQ_MODEL).trim() || 'llama-3.3-70b-versatile';
@@ -262,8 +272,13 @@ function getFallbackReply(userContext, products) {
 }
 
 router.post('/chat', async (req, res) => {
+  const parsedBody = chatBodySchema.safeParse(req.body ?? {});
+  if (!parsedBody.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsedBody.error.issues });
+  }
+  const body = parsedBody.data;
   try {
-    const { message, userContext, token } = req.body || {};
+    const { message, userContext, token } = body;
     const role = (userContext && userContext.role) ? String(userContext.role).toUpperCase() : 'GUEST';
     const name = (userContext && userContext.name) ? String(userContext.name) : '';
     const displayName = (role === 'GUEST') ? 'Invitado' : (name && String(name).trim()) || '';
@@ -366,7 +381,7 @@ En cualquier otra respuesta, termina siempre con: "¿Te ayudo en algo más, ${us
   } catch (error) {
     console.error('[chat] Respuesta por catálogo:', error.message);
 
-    const { userContext, message, token } = req.body || {};
+    const { userContext, message, token } = body;
     const productsPath = path.join(__dirname, '..', '..', 'data.json');
     let products = [];
     let productsData = {};
