@@ -140,6 +140,10 @@
       });
     },
 
+    deleteUser(id, token) {
+      return request('/api/admin/users/' + encodeURIComponent(id), { method: 'DELETE', token });
+    },
+
     sendContact(payload) {
       return request('/api/contact', { method: 'POST', json: payload });
     },

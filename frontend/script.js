@@ -1556,6 +1556,7 @@ const App = (function() {
             <button type="button" class="admin-user-edit text-blue-600 hover:text-blue-800 text-sm font-medium" data-id="${u.id}">Editar</button>
             <button type="button" class="admin-user-toggle text-sm font-medium" data-id="${u.id}" data-active="${u.active !== false}">${u.active !== false ? 'Desactivar' : 'Activar'}</button>
             <button type="button" class="admin-user-reset text-amber-600 hover:text-amber-800 text-sm font-medium" data-id="${u.id}">Reset contraseña</button>
+            <button type="button" class="admin-user-delete text-red-600 hover:text-red-800 text-sm font-medium" data-id="${u.id}">Eliminar</button>
           </div>
         </td>
       </tr>
@@ -1592,6 +1593,21 @@ const App = (function() {
           toast('Contraseña actualizada', 'success');
         } catch (err) {
           toast((err.data && err.data.error) || 'Error al actualizar contraseña', 'error');
+        }
+      });
+    });
+    tbody.querySelectorAll('.admin-user-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        if (!id) return;
+        if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
+        if (!adminToken || typeof window.ProyectWebAPI === 'undefined') { toast('Backend no disponible', 'error'); return; }
+        try {
+          await window.ProyectWebAPI.deleteUser(id, adminToken);
+          toast('Usuario eliminado', 'success');
+          refreshAdminUsers();
+        } catch (err) {
+          toast((err.data && err.data.error) || 'Error al eliminar usuario', 'error');
         }
       });
     });

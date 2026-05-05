@@ -194,7 +194,8 @@ app.post('/api/auth/register', async (req, res) => {
       console.error('[register] SMTP:', mailErr && mailErr.message, mailErr && mailErr.code);
       const mapped = mapMailErrorToHttp(mailErr);
       return res.status(mapped.status).json({
-        error: mapped.message,
+        error:
+          'No se envió el correo de verificación; tu cuenta no se ha registrado. ' + mapped.message,
         code: mapped.code
       });
     }
@@ -340,8 +341,11 @@ function readEnvTrim(name) {
   return String(v).trim();
 }
 
+/** Tiempo máximo de conexión/envío SMTP (evita esperas largas tipo ~120s en Render). */
+const SMTP_TIMEOUT_MS = 15_000;
+
 /**
- * Cliente SMTP orientado a Gmail / Render: puerto 587 (STARTTLS), timeouts cortos, TLS flexible en el servidor.
+ * Cliente SMTP: por defecto 465 (SSL implícito, secure: true) para reducir timeouts en Render; 587 + STARTTLS si defines otro puerto.
  */
 function getTransport() {
   const host = readEnvTrim('SMTP_HOST');
@@ -349,18 +353,39 @@ function getTransport() {
   const pass = process.env.SMTP_PASS != null ? String(process.env.SMTP_PASS).trim() : '';
   if (!host || !user || !pass) return null;
 
-  const port = 587;
+  const portRaw = readEnvTrim('SMTP_PORT');
+  const portParsed = portRaw ? parseInt(portRaw, 10) : 465;
+  const port = Number.isFinite(portParsed) && portParsed > 0 ? portParsed : 465;
+  const secure = port === 465;
+
   return nodemailer.createTransport({
     host,
     port,
-    secure: false,
-    requireTLS: true,
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 10_000,
+    secure,
+    ...(secure ? {} : { requireTLS: true }),
+    connectionTimeout: 15_000,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
     tls: { rejectUnauthorized: false },
     auth: { user, pass }
   });
+}
+
+function raceWithTimeout(promise, ms, code, message) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const e = new Error(message);
+      e.code = code;
+      reject(e);
+    }, ms);
+  });
+  return Promise.race([
+    promise.finally(() => {
+      clearTimeout(timer);
+    }),
+    deadline
+  ]);
 }
 
 /** URL pública del API (obligatoria en producción) para enlaces del correo de verificación. */
@@ -404,13 +429,18 @@ async function sendVerificationEmail(toEmail, verificationToken) {
   const base = getBackendPublicUrlForVerification();
   const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
   const fromAddr = readEnvTrim('SMTP_USER');
-  await transport.sendMail({
-    from: fromAddr,
-    to: toEmail,
-    subject: 'Verifica tu cuenta en ProyectWeb',
-    text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
-    html: `<p>Hola,</p><p>Confirma tu correo pulsando el siguiente enlace:</p><p><a href="${verifyUrl}">Verificar mi cuenta</a></p><p>Si no creaste esta cuenta, ignora este mensaje.</p>`
-  });
+  await raceWithTimeout(
+    transport.sendMail({
+      from: fromAddr,
+      to: toEmail,
+      subject: 'Verifica tu cuenta en ProyectWeb',
+      text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
+      html: `<p>Hola,</p><p>Confirma tu correo pulsando el siguiente enlace:</p><p><a href="${verifyUrl}">Verificar mi cuenta</a></p><p>Si no creaste esta cuenta, ignora este mensaje.</p>`
+    }),
+    SMTP_TIMEOUT_MS,
+    'ETIMEDOUT',
+    'Tiempo de espera al conectar o enviar por SMTP (15 s).'
+  );
 }
 
 // ---- Uploads ----
@@ -1088,6 +1118,21 @@ app.post('/api/admin/users/:id/reset-password', authRequired, adminRequired, asy
     const user = (db.data.users || []).find(u => u.id === id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     user.password_hash = bcrypt.hashSync(parsed.data.newPassword, 10);
+    return res.json({ ok: true });
+  });
+});
+
+app.delete('/api/admin/users/:id', authRequired, adminRequired, async (req, res) => {
+  const id = req.params.id;
+  if (req.user.sub === id) {
+    return res.status(403).json({ error: 'No puedes eliminar tu propia cuenta' });
+  }
+  return dbReadWrite(async (db) => {
+    const users = db.data.users || [];
+    if (!users.some(u => u.id === id)) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    db.data.users = users.filter(u => u.id !== id);
     return res.json({ ok: true });
   });
 });
