@@ -20,7 +20,6 @@ const App = (function() {
   let clientToken = null;
   let selectedPaymentMethod = 'none'; // 'none' | 'stripe'
   let ADMIN_USERS = [];
-  let adminUserDeleteDelegationAttached = false;
   try {
     adminToken = localStorage.getItem(STORAGE_ADMIN_TOKEN);
     clientToken = localStorage.getItem(STORAGE_CLIENT_TOKEN);
@@ -1546,36 +1545,6 @@ const App = (function() {
     }
   }
 
-  async function deleteAdminUserById(id) {
-    if (!id) return;
-    if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
-    if (!adminToken || typeof window.ProyectWebAPI === 'undefined') {
-      toast('Backend no disponible', 'error');
-      return;
-    }
-    try {
-      await window.ProyectWebAPI.deleteUser(id, adminToken);
-      toast('Usuario eliminado', 'success');
-      await refreshAdminUsers();
-    } catch (err) {
-      toast((err.data && err.data.error) || 'Error al eliminar usuario', 'error');
-    }
-  }
-
-  function initAdminUserDeleteDelegation() {
-    if (adminUserDeleteDelegationAttached) return;
-    adminUserDeleteDelegationAttached = true;
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.btn-delete');
-      if (!btn) return;
-      const tbody = document.getElementById('admin-tabla-usuarios');
-      if (!tbody || !tbody.contains(btn)) return;
-      const id = btn.getAttribute('data-id');
-      if (!id) return;
-      deleteAdminUserById(id);
-    });
-  }
-
   function renderAdminUsersTable(users) {
     if (!isAdmin()) return;
     const tbody = document.getElementById('admin-tabla-usuarios');
@@ -1595,7 +1564,7 @@ const App = (function() {
           <div class="flex flex-wrap gap-2">
             <button type="button" class="admin-user-edit text-blue-600 hover:text-blue-800 text-sm font-medium" data-id="${user.id}">Editar</button>
             <button type="button" class="admin-user-toggle text-sm font-medium" data-id="${user.id}" data-active="${user.active !== false}">${user.active !== false ? 'Desactivar' : 'Activar'}</button>
-            <button type="button" class="btn-delete" data-id="${user.id}">Eliminar</button>
+            <button class="btn-delete" data-id="${user.id}">Eliminar</button>
             <button type="button" class="admin-user-reset text-amber-600 hover:text-amber-800 text-sm font-medium" data-id="${user.id}">Reset contraseña</button>
           </div>
         </td>
@@ -2219,4 +2188,42 @@ const App = (function() {
 window.App = App;
 document.addEventListener('DOMContentLoaded', function() {
   App.init();
+});
+
+async function eliminarUsuario(userId) {
+  if (!userId) return;
+  const token = localStorage.getItem('proyectweb_admin_token');
+  if (!token) {
+    alert('Inicia sesión como administrador.');
+    return;
+  }
+  if (typeof window.ProyectWebAPI === 'undefined') {
+    alert('Backend no disponible.');
+    return;
+  }
+  try {
+    await window.ProyectWebAPI.deleteUser(userId, token);
+    if (window.App && typeof window.App.refreshAdminUsers === 'function') {
+      await window.App.refreshAdminUsers();
+    }
+    if (window.App && typeof window.App.toast === 'function') {
+      window.App.toast('Usuario eliminado', 'success');
+    }
+  } catch (err) {
+    const msg = (err.data && err.data.error) || err.message || 'Error al eliminar usuario';
+    if (window.App && typeof window.App.toast === 'function') {
+      window.App.toast(msg, 'error');
+    } else {
+      alert(msg);
+    }
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  if (e.target.classList.contains('btn-delete')) {
+    const userId = e.target.getAttribute('data-id');
+    if (confirm('¿Estás seguro de eliminar este usuario?')) {
+      await eliminarUsuario(userId);
+    }
+  }
 });
