@@ -20,7 +20,6 @@ const App = (function() {
   let clientToken = null;
   let selectedPaymentMethod = 'none'; // 'none' | 'stripe'
   let ADMIN_USERS = [];
-  let adminUserDeleteDelegationAttached = false;
   try {
     adminToken = localStorage.getItem(STORAGE_ADMIN_TOKEN);
     clientToken = localStorage.getItem(STORAGE_CLIENT_TOKEN);
@@ -1546,48 +1545,6 @@ const App = (function() {
     }
   }
 
-  function initAdminUserDeleteDelegation() {
-    if (adminUserDeleteDelegationAttached) return;
-    adminUserDeleteDelegationAttached = true;
-    document.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.btn-delete');
-      if (!btn) return;
-      const tbody = document.getElementById('admin-tabla-usuarios');
-      if (!tbody || !tbody.contains(btn)) return;
-      const userId = btn.getAttribute('data-id');
-      if (!userId) return;
-      if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
-      if (!adminToken || typeof window.ProyectWebAPI === 'undefined') {
-        toast('Backend no disponible', 'error');
-        return;
-      }
-      const base = typeof window.ProyectWebAPI.getBase === 'function' ? window.ProyectWebAPI.getBase() : '';
-      const url = base + '/api/admin/users/' + encodeURIComponent(userId);
-      try {
-        const res = await fetch(url, {
-          method: 'DELETE',
-          headers: { Authorization: 'Bearer ' + adminToken },
-          credentials: 'omit'
-        });
-        const text = await res.text();
-        let data = null;
-        try {
-          data = text ? JSON.parse(text) : null;
-        } catch (_) {
-          data = {};
-        }
-        if (!res.ok) {
-          toast((data && data.error) || 'Error al eliminar usuario', 'error');
-          return;
-        }
-        toast('Usuario eliminado', 'success');
-        await refreshAdminUsers();
-      } catch (_) {
-        toast('Error de red al eliminar usuario', 'error');
-      }
-    });
-  }
-
   function renderAdminUsersTable(users) {
     if (!isAdmin()) return;
     const tbody = document.getElementById('admin-tabla-usuarios');
@@ -2156,7 +2113,13 @@ const App = (function() {
     initProductImagePreview();
     initAdminActions();
     initUserModal();
-    initAdminUserDeleteDelegation();
+    try {
+      initAdminUserDeleteDelegation();
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[ProyectWeb] initAdminUserDeleteDelegation:', err);
+      }
+    }
     initOrderDetailModal();
     initPaymentResult();
     renderCartDrawer();
@@ -2223,7 +2186,6 @@ const App = (function() {
     scrollToCatalogAndRefresh,
     refreshAdminStats,
     refreshAdminUsers,
-    initAdminUserDeleteDelegation,
     renderMisPedidos,
     toast,
   };
@@ -2233,3 +2195,67 @@ window.App = App;
 document.addEventListener('DOMContentLoaded', function() {
   App.init();
 });
+
+let adminUserDeleteDelegationAttached = false;
+
+function initAdminUserDeleteDelegation() {
+  if (adminUserDeleteDelegationAttached) return;
+  adminUserDeleteDelegationAttached = true;
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-delete');
+    if (!btn) return;
+    const tbody = document.getElementById('admin-tabla-usuarios');
+    if (!tbody || !tbody.contains(btn)) return;
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+    if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
+    const token = localStorage.getItem('proyectweb_admin_token');
+    if (!token) {
+      if (window.App && typeof window.App.toast === 'function') {
+        window.App.toast('Inicia sesión como administrador.', 'error');
+      } else {
+        alert('Inicia sesión como administrador.');
+      }
+      return;
+    }
+    const base = window.ProyectWebAPI && typeof window.ProyectWebAPI.getBase === 'function'
+      ? window.ProyectWebAPI.getBase()
+      : '';
+    const url = base + '/api/admin/users/' + encodeURIComponent(id);
+    try {
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token },
+        credentials: 'omit'
+      });
+      const text = await res.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (_) {
+        data = {};
+      }
+      if (!res.ok) {
+        const msg = (data && data.error) || 'Error al eliminar usuario';
+        if (window.App && typeof window.App.toast === 'function') {
+          window.App.toast(msg, 'error');
+        } else {
+          alert(msg);
+        }
+        return;
+      }
+      if (window.App && typeof window.App.refreshAdminUsers === 'function') {
+        await window.App.refreshAdminUsers();
+      }
+      if (window.App && typeof window.App.toast === 'function') {
+        window.App.toast('Usuario eliminado', 'success');
+      }
+    } catch (_) {
+      if (window.App && typeof window.App.toast === 'function') {
+        window.App.toast('Error de red al eliminar usuario', 'error');
+      } else {
+        alert('Error de red al eliminar usuario');
+      }
+    }
+  });
+}
