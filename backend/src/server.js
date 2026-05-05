@@ -191,7 +191,7 @@ app.post('/api/auth/register', async (req, res) => {
     try {
       await sendVerificationEmail(user.email, verificationToken);
     } catch (mailErr) {
-      console.error('[register] SMTP:', mailErr && mailErr.message, mailErr && mailErr.code);
+      logSmtpError('register', mailErr);
       const mapped = mapMailErrorToHttp(mailErr);
       return res.status(mapped.status).json({
         error:
@@ -341,11 +341,25 @@ function readEnvTrim(name) {
   return String(v).trim();
 }
 
-/** Tiempo máximo de conexión/envío SMTP (evita esperas largas tipo ~120s en Render). */
-const SMTP_TIMEOUT_MS = 15_000;
+/** Tiempo máximo de conexión/envío SMTP y carrera con raceWithTimeout(sendMail). */
+const SMTP_TIMEOUT_MS = 30_000;
+
+/** Log detallado de errores nodemailer / red (útil en Render y depuración). */
+function logSmtpError(context, err) {
+  console.error(`[SMTP:${context}]`, {
+    message: err && err.message,
+    code: err && err.code,
+    command: err && err.command,
+    response: err && err.response,
+    responseCode: err && err.responseCode,
+    errno: err && err.errno,
+    syscall: err && err.syscall,
+    stack: err && err.stack
+  });
+}
 
 /**
- * Cliente SMTP: por defecto 465 (SSL implícito, secure: true) para reducir timeouts en Render; 587 + STARTTLS si defines otro puerto.
+ * Cliente SMTP: por defecto 587 + STARTTLS (secure: false). Puerto 465 en .env usa SSL implícito (secure: true).
  */
 function getTransport() {
   const host = readEnvTrim('SMTP_HOST');
@@ -354,8 +368,8 @@ function getTransport() {
   if (!host || !user || !pass) return null;
 
   const portRaw = readEnvTrim('SMTP_PORT');
-  const portParsed = portRaw ? parseInt(portRaw, 10) : 465;
-  const port = Number.isFinite(portParsed) && portParsed > 0 ? portParsed : 465;
+  const portParsed = portRaw ? parseInt(portRaw, 10) : 587;
+  const port = Number.isFinite(portParsed) && portParsed > 0 ? portParsed : 587;
   const secure = port === 465;
 
   return nodemailer.createTransport({
@@ -363,9 +377,9 @@ function getTransport() {
     port,
     secure,
     ...(secure ? {} : { requireTLS: true }),
-    connectionTimeout: 15_000,
-    greetingTimeout: SMTP_TIMEOUT_MS,
-    socketTimeout: SMTP_TIMEOUT_MS,
+    connectionTimeout: 30_000,
+    greetingTimeout: 30_000,
+    socketTimeout: 30_000,
     tls: { rejectUnauthorized: false },
     auth: { user, pass }
   });
@@ -439,7 +453,7 @@ async function sendVerificationEmail(toEmail, verificationToken) {
     }),
     SMTP_TIMEOUT_MS,
     'ETIMEDOUT',
-    'Tiempo de espera al conectar o enviar por SMTP (15 s).'
+    'Tiempo de espera al conectar o enviar por SMTP (30 s).'
   );
 }
 
@@ -1169,7 +1183,7 @@ app.post('/api/contact', async (req, res) => {
     });
     return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('contact email error', err);
+    logSmtpError('contact', err);
     const mapped = mapMailErrorToHttp(err);
     return res.status(mapped.status).json({ error: mapped.message, code: mapped.code });
   }
