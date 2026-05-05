@@ -3,15 +3,11 @@
  * JavaScript Vanilla. Archivo vinculado en index.html antes del cierre de </body>.
  */
 
-let adminUserDeleteDelegationAttached = false;
-
-/** Delegación global para eliminar usuarios (CSP: sin onclick inline). Declarativa y hoisted antes del IIFE de App. */
 function initAdminUserDeleteDelegation() {
-  const adminUsersTbody = document.getElementById('admin-tabla-usuarios');
-  if (!adminUsersTbody) return;
+  if (!document.querySelector(".btn-delete-container")) return;
 
-  if (adminUserDeleteDelegationAttached) return;
-  adminUserDeleteDelegationAttached = true;
+  if (initAdminUserDeleteDelegation._delegationAttached) return;
+  initAdminUserDeleteDelegation._delegationAttached = true;
 
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('.btn-delete');
@@ -2183,11 +2179,9 @@ const App = (function() {
     initAdminActions();
     initUserModal();
     try {
-      initAdminUserDeleteDelegation();
-    } catch (err) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[ProyectWeb] initAdminUserDeleteDelegation:', err);
-      }
+      await initAdminUserDeleteDelegation();
+    } catch (error) {
+      console.warn('Error en usuarios, pero continuando con productos:', error);
     }
     initOrderDetailModal();
     initPaymentResult();
