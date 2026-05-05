@@ -1,65 +1,3 @@
-function initAdminUserDeleteDelegation() {
-  console.log('Módulo de usuarios cargado');
-  document.addEventListener('click', async (e) => {
-    if (e.target.closest('.btn-delete')) {
-      const id = e.target.closest('.btn-delete').dataset.id;
-      if (confirm('¿Eliminar usuario?')) await eliminarUsuario(id);
-    }
-  });
-}
-
-async function eliminarUsuario(id) {
-  if (!id) return;
-  const token = localStorage.getItem('proyectweb_admin_token');
-  if (!token) {
-    if (window.App && typeof window.App.toast === 'function') {
-      window.App.toast('Inicia sesión como administrador.', 'error');
-    } else {
-      alert('Inicia sesión como administrador.');
-    }
-    return;
-  }
-  const base = window.ProyectWebAPI && typeof window.ProyectWebAPI.getBase === 'function'
-    ? window.ProyectWebAPI.getBase()
-    : '';
-  const url = base + '/api/admin/users/' + encodeURIComponent(id);
-  try {
-    const res = await fetch(url, {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + token },
-      credentials: 'omit'
-    });
-    const text = await res.text();
-    let data = null;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch (_) {
-      data = {};
-    }
-    if (!res.ok) {
-      const msg = (data && data.error) || 'Error al eliminar usuario';
-      if (window.App && typeof window.App.toast === 'function') {
-        window.App.toast(msg, 'error');
-      } else {
-        alert(msg);
-      }
-      return;
-    }
-    if (window.App && typeof window.App.refreshAdminUsers === 'function') {
-      await window.App.refreshAdminUsers();
-    }
-    if (window.App && typeof window.App.toast === 'function') {
-      window.App.toast('Usuario eliminado', 'success');
-    }
-  } catch (_) {
-    if (window.App && typeof window.App.toast === 'function') {
-      window.App.toast('Error de red al eliminar usuario', 'error');
-    } else {
-      alert('Error de red al eliminar usuario');
-    }
-  }
-}
-
 /**
  * ProyectWeb - Lógica de carrito, login (modal) y drawer.
  * JavaScript Vanilla. Archivo vinculado en index.html antes del cierre de </body>.
@@ -2137,7 +2075,7 @@ const App = (function() {
     }
   }
 
-  async function cargarCatalogo() {
+  async function cargarProductos() {
     const grid = document.getElementById('catalog-grid');
     try {
       const list = await loadProducts();
@@ -2146,6 +2084,11 @@ const App = (function() {
       PRODUCTS = getProductsSync();
     }
     updateCartBadges();
+    if (grid) renderCatalog(grid);
+  }
+
+  async function renderCatalogo() {
+    const grid = document.getElementById('catalog-grid');
     if (grid) renderCatalog(grid);
   }
 
@@ -2188,12 +2131,31 @@ const App = (function() {
     initAdminActions();
     initUserModal();
     try {
-      initAdminUserDeleteDelegation();
+      console.log('Iniciando limpieza de seguridad...');
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-delete');
+        if (btn) {
+          const id = btn.dataset.id;
+          if (confirm('¿Eliminar usuario definitivamente?')) {
+            const token = localStorage.getItem('proyectweb_admin_token');
+            const res = await fetch('/api/admin/users/' + encodeURIComponent(id), {
+              method: 'DELETE',
+              headers: token ? { Authorization: 'Bearer ' + token } : {},
+              credentials: 'omit'
+            });
+            if (res.ok) location.reload();
+          }
+        }
+      });
     } catch (e) {
-      console.error('Error no crítico:', e);
+      console.warn('Error ignorado para cargar catálogo:', e);
     }
-    console.log('Forzando carga de catálogo...');
-    if (typeof cargarCatalogo === 'function') await cargarCatalogo();
+
+    if (typeof cargarProductos === 'function') {
+      await cargarProductos();
+    } else if (typeof renderCatalogo === 'function') {
+      await renderCatalogo();
+    }
     initOrderDetailModal();
     initPaymentResult();
     renderCartDrawer();
