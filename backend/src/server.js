@@ -190,14 +190,8 @@ app.post('/api/auth/register', async (req, res) => {
 
     try {
       await sendVerificationEmail(user.email, verificationToken);
-    } catch (mailErr) {
-      logSmtpError('register', mailErr);
-      const mapped = mapMailErrorToHttp(mailErr);
-      return res.status(mapped.status).json({
-        error:
-          'No se envió el correo de verificación; tu cuenta no se ha registrado. ' + mapped.message,
-        code: mapped.code
-      });
+    } catch (error) {
+      console.error('Error enviando correo:', error);
     }
 
     let raceConflict = false;
@@ -342,7 +336,7 @@ function readEnvTrim(name) {
 }
 
 /** Tiempo máximo de conexión/envío SMTP y carrera con raceWithTimeout(sendMail). */
-const SMTP_TIMEOUT_MS = 30_000;
+const SMTP_TIMEOUT_MS = 10_000;
 
 /** Log detallado de errores nodemailer / red (útil en Render y depuración). */
 function logSmtpError(context, err) {
@@ -377,9 +371,9 @@ function getTransport() {
     port,
     secure,
     ...(secure ? {} : { requireTLS: true }),
-    connectionTimeout: 30_000,
-    greetingTimeout: 30_000,
-    socketTimeout: 30_000,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
     tls: { rejectUnauthorized: false },
     auth: { user, pass }
   });
@@ -453,7 +447,7 @@ async function sendVerificationEmail(toEmail, verificationToken) {
     }),
     SMTP_TIMEOUT_MS,
     'ETIMEDOUT',
-    'Tiempo de espera al conectar o enviar por SMTP (30 s).'
+    'Tiempo de espera al conectar o enviar por SMTP (10 s).'
   );
 }
 
