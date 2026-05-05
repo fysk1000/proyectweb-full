@@ -1545,18 +1545,18 @@ const App = (function() {
       tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No hay usuarios o no se pudo cargar</td></tr>';
       return;
     }
-    tbody.innerHTML = list.map(u => `
+    tbody.innerHTML = list.map(user => `
       <tr class="hover:bg-slate-50">
-        <td class="px-4 py-3 text-slate-700">${(u.email || '').replace(/</g, '&lt;')}</td>
-        <td class="px-4 py-3 font-medium text-slate-900">${(u.name || '—').replace(/</g, '&lt;')}</td>
-        <td class="px-4 py-3 text-slate-700">${u.role || 'CLIENT'}</td>
-        <td class="px-4 py-3">${u.active !== false ? '<span class="text-green-600">Activo</span>' : '<span class="text-slate-500">Inactivo</span>'}</td>
+        <td class="px-4 py-3 text-slate-700">${(user.email || '').replace(/</g, '&lt;')}</td>
+        <td class="px-4 py-3 font-medium text-slate-900">${(user.name || '—').replace(/</g, '&lt;')}</td>
+        <td class="px-4 py-3 text-slate-700">${user.role || 'CLIENT'}</td>
+        <td class="px-4 py-3">${user.active !== false ? '<span class="text-green-600">Activo</span>' : '<span class="text-slate-500">Inactivo</span>'}</td>
         <td class="px-4 py-3">
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="admin-user-edit text-blue-600 hover:text-blue-800 text-sm font-medium" data-id="${u.id}">Editar</button>
-            <button type="button" class="admin-user-toggle text-sm font-medium" data-id="${u.id}" data-active="${u.active !== false}">${u.active !== false ? 'Desactivar' : 'Activar'}</button>
-            <button type="button" class="admin-user-reset text-amber-600 hover:text-amber-800 text-sm font-medium" data-id="${u.id}">Reset contraseña</button>
-            <button type="button" class="admin-user-delete text-red-600 hover:text-red-800 text-sm font-medium" data-id="${u.id}">Eliminar</button>
+            <button type="button" class="admin-user-edit text-blue-600 hover:text-blue-800 text-sm font-medium" data-id="${user.id}">Editar</button>
+            <button type="button" class="admin-user-toggle text-sm font-medium" data-id="${user.id}" data-active="${user.active !== false}">${user.active !== false ? 'Desactivar' : 'Activar'}</button>
+            <button onclick="eliminarUsuario('${user.id}')" class="btn-delete">Eliminar</button>
+            <button type="button" class="admin-user-reset text-amber-600 hover:text-amber-800 text-sm font-medium" data-id="${user.id}">Reset contraseña</button>
           </div>
         </td>
       </tr>
@@ -1593,21 +1593,6 @@ const App = (function() {
           toast('Contraseña actualizada', 'success');
         } catch (err) {
           toast((err.data && err.data.error) || 'Error al actualizar contraseña', 'error');
-        }
-      });
-    });
-    tbody.querySelectorAll('.admin-user-delete').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        if (!id) return;
-        if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
-        if (!adminToken || typeof window.ProyectWebAPI === 'undefined') { toast('Backend no disponible', 'error'); return; }
-        try {
-          await window.ProyectWebAPI.deleteUser(id, adminToken);
-          toast('Usuario eliminado', 'success');
-          refreshAdminUsers();
-        } catch (err) {
-          toast((err.data && err.data.error) || 'Error al eliminar usuario', 'error');
         }
       });
     });
@@ -2184,6 +2169,7 @@ const App = (function() {
     scrollToSection,
     scrollToCatalogAndRefresh,
     refreshAdminStats,
+    refreshAdminUsers,
     renderMisPedidos,
     toast,
   };
@@ -2193,3 +2179,51 @@ window.App = App;
 document.addEventListener('DOMContentLoaded', function() {
   App.init();
 });
+
+async function eliminarUsuario(id) {
+  if (!id) return;
+  if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
+  var token = localStorage.getItem('proyectweb_admin_token');
+  if (!token) {
+    alert('Inicia sesión como administrador.');
+    return;
+  }
+  var base = '';
+  try {
+    if (window.ProyectWebAPI && typeof window.ProyectWebAPI.getBase === 'function') {
+      base = window.ProyectWebAPI.getBase();
+    } else if (window.__ENV__ && window.__ENV__.API_BASE) {
+      base = String(window.__ENV__.API_BASE).replace(/\/$/, '');
+    } else {
+      var ls = localStorage.getItem('proyectweb_api_base');
+      if (ls) base = String(ls).replace(/\/$/, '');
+    }
+  } catch (e) {}
+  var url = base + '/api/admin/users/' + encodeURIComponent(id);
+  try {
+    var res = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token },
+      credentials: 'omit'
+    });
+    var text = await res.text();
+    var data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (err) {
+      data = {};
+    }
+    if (!res.ok) {
+      alert((data && data.error) || 'No se pudo eliminar el usuario');
+      return;
+    }
+    if (window.App && typeof window.App.refreshAdminUsers === 'function') {
+      await window.App.refreshAdminUsers();
+    }
+    if (window.App && typeof window.App.toast === 'function') {
+      window.App.toast('Usuario eliminado', 'success');
+    }
+  } catch (err) {
+    alert('Error de red al eliminar el usuario');
+  }
+}
