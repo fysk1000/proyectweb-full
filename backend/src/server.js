@@ -336,7 +336,7 @@ function readEnvTrim(name) {
 }
 
 /** Tiempo máximo de conexión/envío SMTP y carrera con raceWithTimeout(sendMail). */
-const SMTP_TIMEOUT_MS = 10_000;
+const SMTP_TIMEOUT_MS = 60_000;
 
 /** Log detallado de errores nodemailer / red (útil en Render y depuración). */
 function logSmtpError(context, err) {
@@ -353,28 +353,23 @@ function logSmtpError(context, err) {
 }
 
 /**
- * Cliente SMTP: por defecto 587 + STARTTLS (secure: false). Puerto 465 en .env usa SSL implícito (secure: true).
+ * Cliente SMTP (Render: SMTP_HOST, SMTP_USER, SMTP_PASS). Puerto 2525 + STARTTLS, timeouts largos.
  */
 function getTransport() {
-  const host = readEnvTrim('SMTP_HOST');
-  const user = readEnvTrim('SMTP_USER');
+  const host = process.env.SMTP_HOST != null ? String(process.env.SMTP_HOST).trim() : '';
+  const user = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
   const pass = process.env.SMTP_PASS != null ? String(process.env.SMTP_PASS).trim() : '';
   if (!host || !user || !pass) return null;
 
-  const portRaw = readEnvTrim('SMTP_PORT');
-  const portParsed = portRaw ? parseInt(portRaw, 10) : 587;
-  const port = Number.isFinite(portParsed) && portParsed > 0 ? portParsed : 587;
-  const secure = port === 465;
-
   return nodemailer.createTransport({
     host,
-    port,
-    secure,
-    ...(secure ? {} : { requireTLS: true }),
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 10_000,
-    tls: { rejectUnauthorized: false },
+    port: 2525,
+    secure: false,
+    requireTLS: true,
+    connectionTimeout: 60_000,
+    greetingTimeout: 60_000,
+    socketTimeout: 60_000,
+    tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
     auth: { user, pass }
   });
 }
@@ -436,7 +431,7 @@ async function sendVerificationEmail(toEmail, verificationToken) {
 
   const base = getBackendPublicUrlForVerification();
   const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
-  const fromAddr = readEnvTrim('SMTP_USER');
+  const fromAddr = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
   await raceWithTimeout(
     transport.sendMail({
       from: fromAddr,
@@ -447,7 +442,7 @@ async function sendVerificationEmail(toEmail, verificationToken) {
     }),
     SMTP_TIMEOUT_MS,
     'ETIMEDOUT',
-    'Tiempo de espera al conectar o enviar por SMTP (10 s).'
+    'Tiempo de espera al conectar o enviar por SMTP (60 s).'
   );
 }
 
@@ -1168,8 +1163,9 @@ app.post('/api/contact', async (req, res) => {
   }
 
   try {
+    const fromSmtp = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
     await transport.sendMail({
-      from: readEnvTrim('SMTP_USER'),
+      from: fromSmtp,
       to,
       subject: `Contacto ProyectWeb — ${name}`,
       replyTo: email,
