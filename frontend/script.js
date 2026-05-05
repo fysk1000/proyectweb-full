@@ -20,6 +20,7 @@ const App = (function() {
   let clientToken = null;
   let selectedPaymentMethod = 'none'; // 'none' | 'stripe'
   let ADMIN_USERS = [];
+  let adminUserDeleteDelegationAttached = false;
   try {
     adminToken = localStorage.getItem(STORAGE_ADMIN_TOKEN);
     clientToken = localStorage.getItem(STORAGE_CLIENT_TOKEN);
@@ -36,6 +37,13 @@ const App = (function() {
   // --- Catálogo de productos (imágenes Unsplash relacionadas a cada producto) ---
   const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x300?text=Sin+imagen';
   const DEFAULT_PRODUCT_IMAGE = PLACEHOLDER_IMAGE;
+
+  function bindImageFallback(imgEl, fallbackSrc) {
+    imgEl.addEventListener('error', function onImgError() {
+      imgEl.removeEventListener('error', onImgError);
+      imgEl.src = fallbackSrc;
+    });
+  }
 
   const priceFormat = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
   function formatPrice(num) { return priceFormat.format(Number(num)); }
@@ -539,7 +547,7 @@ const App = (function() {
       const imgAlt = escapeHtmlAttr(`Imagen de ${item.name || 'producto'}`);
       return `
         <div class="cart-drawer-item" data-id="${item.id}">
-          <img src="${img}" alt="${imgAlt}" class="cart-drawer-item-img" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">
+          <img src="${img}" alt="${imgAlt}" class="cart-drawer-item-img">
           <div class="cart-drawer-item-body">
             <p class="font-medium text-slate-900 text-sm">${item.name}</p>
             <p class="text-indigo-600 font-semibold text-sm">${formatPrice(item.price)} × ${item.quantity}</p>
@@ -569,6 +577,7 @@ const App = (function() {
         toast('Producto eliminado', 'success');
       });
     });
+    listEl.querySelectorAll('.cart-drawer-item-img').forEach(img => bindImageFallback(img, PLACEHOLDER_IMAGE));
 
     if (subtotalEl) subtotalEl.textContent = formatPrice(getCartTotal());
   }
@@ -856,7 +865,7 @@ const App = (function() {
       const altText = escapeHtmlAttr(p.name ? `Fotografía de ${p.name}` : 'Producto del catálogo');
       return `
       <article class="product-card">
-        <img src="${imgSrc}" alt="${altText}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}'">
+        <img src="${imgSrc}" alt="${altText}" loading="lazy" class="catalog-product-img">
         <div class="p-4">
           <h3 class="product-card-title">${p.name}</h3>
           <p class="product-card-price">${formatPrice(p.price)}</p>
@@ -874,6 +883,7 @@ const App = (function() {
         openCartDrawer();
       });
     });
+    container.querySelectorAll('.catalog-product-img').forEach(img => bindImageFallback(img, PLACEHOLDER_IMAGE));
   }
 
   function toast(message, type = 'success') {
@@ -1536,6 +1546,36 @@ const App = (function() {
     }
   }
 
+  async function deleteAdminUserById(id) {
+    if (!id) return;
+    if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
+    if (!adminToken || typeof window.ProyectWebAPI === 'undefined') {
+      toast('Backend no disponible', 'error');
+      return;
+    }
+    try {
+      await window.ProyectWebAPI.deleteUser(id, adminToken);
+      toast('Usuario eliminado', 'success');
+      await refreshAdminUsers();
+    } catch (err) {
+      toast((err.data && err.data.error) || 'Error al eliminar usuario', 'error');
+    }
+  }
+
+  function initAdminUserDeleteDelegation() {
+    if (adminUserDeleteDelegationAttached) return;
+    adminUserDeleteDelegationAttached = true;
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-delete');
+      if (!btn) return;
+      const tbody = document.getElementById('admin-tabla-usuarios');
+      if (!tbody || !tbody.contains(btn)) return;
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      deleteAdminUserById(id);
+    });
+  }
+
   function renderAdminUsersTable(users) {
     if (!isAdmin()) return;
     const tbody = document.getElementById('admin-tabla-usuarios');
@@ -1555,7 +1595,7 @@ const App = (function() {
           <div class="flex flex-wrap gap-2">
             <button type="button" class="admin-user-edit text-blue-600 hover:text-blue-800 text-sm font-medium" data-id="${user.id}">Editar</button>
             <button type="button" class="admin-user-toggle text-sm font-medium" data-id="${user.id}" data-active="${user.active !== false}">${user.active !== false ? 'Desactivar' : 'Activar'}</button>
-            <button onclick="eliminarUsuario('${user.id}')" class="btn-delete">Eliminar</button>
+            <button type="button" class="btn-delete" data-id="${user.id}">Eliminar</button>
             <button type="button" class="admin-user-reset text-amber-600 hover:text-amber-800 text-sm font-medium" data-id="${user.id}">Reset contraseña</button>
           </div>
         </td>
@@ -2104,6 +2144,7 @@ const App = (function() {
     initProductImagePreview();
     initAdminActions();
     initUserModal();
+    initAdminUserDeleteDelegation();
     initOrderDetailModal();
     initPaymentResult();
     renderCartDrawer();
@@ -2179,51 +2220,3 @@ window.App = App;
 document.addEventListener('DOMContentLoaded', function() {
   App.init();
 });
-
-async function eliminarUsuario(id) {
-  if (!id) return;
-  if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
-  var token = localStorage.getItem('proyectweb_admin_token');
-  if (!token) {
-    alert('Inicia sesión como administrador.');
-    return;
-  }
-  var base = '';
-  try {
-    if (window.ProyectWebAPI && typeof window.ProyectWebAPI.getBase === 'function') {
-      base = window.ProyectWebAPI.getBase();
-    } else if (window.__ENV__ && window.__ENV__.API_BASE) {
-      base = String(window.__ENV__.API_BASE).replace(/\/$/, '');
-    } else {
-      var ls = localStorage.getItem('proyectweb_api_base');
-      if (ls) base = String(ls).replace(/\/$/, '');
-    }
-  } catch (e) {}
-  var url = base + '/api/admin/users/' + encodeURIComponent(id);
-  try {
-    var res = await fetch(url, {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + token },
-      credentials: 'omit'
-    });
-    var text = await res.text();
-    var data = null;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch (err) {
-      data = {};
-    }
-    if (!res.ok) {
-      alert((data && data.error) || 'No se pudo eliminar el usuario');
-      return;
-    }
-    if (window.App && typeof window.App.refreshAdminUsers === 'function') {
-      await window.App.refreshAdminUsers();
-    }
-    if (window.App && typeof window.App.toast === 'function') {
-      window.App.toast('Usuario eliminado', 'success');
-    }
-  } catch (err) {
-    alert('Error de red al eliminar el usuario');
-  }
-}

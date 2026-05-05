@@ -454,15 +454,24 @@
       const imgUrl = getProductImageUrl(p);
       const safeName = (p.name || 'Producto').replace(/</g, '&lt;').replace(/"/g, '&quot;');
       const safeId = (p.id || '').replace(/"/g, '&quot;');
-      const imgAlt = escapeHtmlAttr('Imagen de ' + (p.name || 'producto'));
       const addLabel = escapeHtmlAttr('Añadir ' + (p.name || 'producto') + ' al carrito');
-      card.innerHTML =
-        (imgUrl ? '<img src="' + imgUrl + '" alt="' + imgAlt + '" class="w-12 h-12 object-cover rounded-lg shrink-0" onerror="this.style.display=\'none\'">' : '') +
-        '<div class="flex-1 min-w-0">' +
+      const body = document.createElement('div');
+      body.className = 'flex-1 min-w-0';
+      body.innerHTML =
         '<p class="font-semibold text-slate-900 m-0 mb-0.5">' + safeName + '</p>' +
         '<p class="text-indigo-600 font-semibold text-xs m-0 mb-1">' + formatPrice(p.price) + '</p>' +
-        '<button type="button" class="chat-product-card-add btn btn-primary btn-sm text-xs" data-product-id="' + safeId + '" aria-label="' + addLabel + '">Añadir</button>' +
-        '</div>';
+        '<button type="button" class="chat-product-card-add btn btn-primary btn-sm text-xs" data-product-id="' + safeId + '" aria-label="' + addLabel + '">Añadir</button>';
+      if (imgUrl) {
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.alt = 'Imagen de ' + (p.name || 'producto');
+        img.className = 'w-12 h-12 object-cover rounded-lg shrink-0';
+        img.addEventListener('error', function() {
+          img.style.display = 'none';
+        });
+        card.appendChild(img);
+      }
+      card.appendChild(body);
       list.appendChild(card);
     });
     bubble.appendChild(list);
