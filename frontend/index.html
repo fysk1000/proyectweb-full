@@ -260,6 +260,15 @@
           <p class="mb-4">Nuestra misión es conectar productos con personas, facilitando el acceso a tecnología y accesorios que mejoran el día a día. Trabajamos con proveedores verificados y garantizamos envíos rápidos a toda la península.</p>
           <p>Si tienes dudas, estamos en la sección de contacto para ayudarte. ¡Gracias por visitarnos!</p>
         </div>
+        <figure class="max-w-3xl mx-auto my-8 sm:my-10">
+          <figcaption class="text-sm text-slate-600 mb-2 text-center">Vídeo de demostración con subtítulos WebVTT</figcaption>
+          <video class="w-full rounded-xl border border-slate-200 bg-black aspect-video" controls playsinline preload="metadata">
+            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm" type="video/webm">
+            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+            <track kind="subtitles" srclang="es" label="Español" src="./media/sample-es.vtt" default>
+            <p class="text-white p-4 text-sm">Tu navegador no admite vídeo HTML5.</p>
+          </video>
+        </figure>
         <h3 class="text-xl font-semibold text-slate-900 mb-4 text-center">Ubicación</h3>
         <div class="rounded-lg sm:rounded-xl overflow-hidden border border-slate-200 shadow-sm max-w-4xl mx-auto aspect-video bg-slate-200 w-full">
           <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3037.497237371635!2d-3.703790323733987!3d40.416775371352!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xd42287e239f2c1d%3A0x8e0b1b2b3c4d5e6f!2sPuerta%20del%20Sol%2C%20Madrid!5e0!3m2!1ses!2ses!4v1708000000000!5m2!1ses!2ses" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de ubicación"></iframe>
@@ -595,6 +604,7 @@
 
   <script src="./api.js"></script>
   <script src="./script.js"></script>
+  <script src="./a11y.js"></script>
   <script src="./chat.js"></script>
 </body>
 </html>
