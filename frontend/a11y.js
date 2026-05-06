@@ -39,6 +39,9 @@
 
   /** Línea horizontal de lectura guiada */
   var readingLine = null;
+  /** Última Y del puntero en viewport (para posicionar al activar sin mover el ratón). */
+  var lastPointerClientY = -1;
+
   function ensureReadingLine() {
     if (readingLine) return readingLine;
     readingLine = document.createElement('div');
@@ -49,17 +52,37 @@
     return readingLine;
   }
 
+  function updateReadingLinePosition(clientY) {
+    if (!readingLine || !prefs.readingGuide) return;
+    var h = 4;
+    var y = typeof clientY === 'number' ? clientY : lastPointerClientY;
+    if (y < 0) y = Math.floor(window.innerHeight / 2);
+    var top = Math.round(y - h / 2);
+    var maxTop = Math.max(0, window.innerHeight - h);
+    if (top < 0) top = 0;
+    if (top > maxTop) top = maxTop;
+    readingLine.style.top = top + 'px';
+  }
+
   function setReadingGuide(on) {
     prefs.readingGuide = !!on;
     savePrefs();
     var line = ensureReadingLine();
     line.hidden = !prefs.readingGuide;
     line.classList.toggle('a11y-reading-line--active', prefs.readingGuide);
+    if (prefs.readingGuide) {
+      updateReadingLinePosition(lastPointerClientY);
+    }
   }
 
-  function onMouseMove(e) {
+  function onPointerMove(e) {
+    if (e && typeof e.clientY === 'number') lastPointerClientY = e.clientY;
     if (!prefs.readingGuide || !readingLine) return;
-    readingLine.style.transform = 'translateY(' + e.clientY + 'px)';
+    updateReadingLinePosition(e.clientY);
+  }
+
+  function onWindowResize() {
+    if (prefs.readingGuide && readingLine) updateReadingLinePosition(lastPointerClientY);
   }
 
   function isSpeechSynthesisAvailable() {
@@ -204,7 +227,9 @@
       if (isSpeechSynthesisAvailable()) window.speechSynthesis.cancel();
     });
 
-    document.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('mousemove', onPointerMove, { passive: true });
+    window.addEventListener('resize', onWindowResize, { passive: true });
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !panel.hidden) {
