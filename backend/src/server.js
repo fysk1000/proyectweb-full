@@ -353,7 +353,8 @@ function logSmtpError(context, err) {
 }
 
 /**
- * Cliente SMTP (Render: SMTP_HOST, SMTP_USER, SMTP_PASS). Puerto 2525 + STARTTLS, timeouts largos.
+ * Transporte SMTP (Brevo u otro): SMTP_HOST, SMTP_USER, SMTP_PASS en Render.
+ * El remitente (from en sendMail) debe ser exactamente la cuenta verificada en Brevo (= SMTP_USER).
  */
 function getTransport() {
   const host = process.env.SMTP_HOST != null ? String(process.env.SMTP_HOST).trim() : '';
@@ -363,14 +364,12 @@ function getTransport() {
 
   return nodemailer.createTransport({
     host,
-    port: 2525,
+    port: 587,
     secure: false,
-    requireTLS: true,
-    connectionTimeout: 60_000,
-    greetingTimeout: 60_000,
-    socketTimeout: 60_000,
-    tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
-    auth: { user, pass }
+    auth: {
+      user,
+      pass
+    }
   });
 }
 
@@ -431,6 +430,7 @@ async function sendVerificationEmail(toEmail, verificationToken) {
 
   const base = getBackendPublicUrlForVerification();
   const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
+  /** Remitente: debe coincidir con la cuenta verificada en Brevo (misma que SMTP_USER). */
   const fromAddr = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
   await raceWithTimeout(
     transport.sendMail({
@@ -1163,6 +1163,7 @@ app.post('/api/contact', async (req, res) => {
   }
 
   try {
+    /** Remitente: misma cuenta que SMTP_USER / Brevo verificado. */
     const fromSmtp = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
     await transport.sendMail({
       from: fromSmtp,
