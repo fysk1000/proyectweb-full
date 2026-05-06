@@ -14,7 +14,7 @@ import nodemailer from 'nodemailer';
 import { z } from 'zod';
 
 import { openDb } from './db.js';
-import { signToken, authRequired, adminRequired, optionalBearerAuth } from './auth.js';
+import { signToken, authRequired, isAdmin, isAdministratorRole, optionalBearerAuth } from './auth.js';
 import { createPreference, getPayment } from './mp.js';
 import chatRouter from './routes/chat.js';
 import Stripe from 'stripe';
@@ -75,6 +75,24 @@ function mapProduct(p){
 
 function safeLower(v){ return String(v || '').toLowerCase(); }
 
+/** Rol persistido: user (defecto) | admin. Acepta legado ADMIN/CLIENT al crear/actualizar. */
+function normalizeStoredRole(input) {
+  const s = String(input ?? 'user').trim();
+  if (safeLower(s) === 'admin') return 'admin';
+  return 'user';
+}
+
+/** Remitente SMTP (solo variables de entorno). */
+function getSmtpFromAddress() {
+  if (process.env.SMTP_FROM != null && String(process.env.SMTP_FROM).trim()) {
+    return String(process.env.SMTP_FROM).trim();
+  }
+  if (process.env.MAIL_FROM != null && String(process.env.MAIL_FROM).trim()) {
+    return String(process.env.MAIL_FROM).trim();
+  }
+  return '';
+}
+
 // ---- Middleware ----
 app.use(
   helmet({
@@ -95,6 +113,16 @@ app.use(express.json({ limit: '2mb' }));
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(rateLimit({ windowMs: 60_000, max: 120 }));
+
+/** Login: máximo 5 intentos fallidos por IP cada 15 minutos (respuestas ≥400 cuentan). */
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Demasiados intentos de inicio de sesión. Vuelve a intentarlo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true
+});
 
 // Carpeta backend/uploads: crear si no existe y servir estática
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -177,12 +205,13 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const verificationToken = nanoid();
+    const password_hash = await bcrypt.hash(password, 10);
     const user = {
       id: nanoid(),
       email,
       name,
-      password_hash: bcrypt.hashSync(password, 10),
-      role: 'CLIENT',
+      password_hash,
+      role: 'user',
       isVerified: false,
       verificationToken,
       created_at: nowISO()
@@ -226,7 +255,7 @@ const loginSchema = z.object({
   email: z.string().trim().email().transform(s => s.toLowerCase()),
   password: z.string().min(1, 'La contraseña es obligatoria')
 });
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
   try {
     requireSecret();
   } catch {
@@ -358,17 +387,24 @@ function logSmtpError(context, err) {
  */
 function getTransport() {
   if (process.env.SMTP_USER == null || process.env.SMTP_PASS == null) return null;
-  const userTrim = process.env.SMTP_USER.trim();
-  const passTrim = process.env.SMTP_PASS.trim();
+  const userTrim = String(process.env.SMTP_USER).trim();
+  const passTrim = String(process.env.SMTP_PASS).trim();
   if (!userTrim || !passTrim) return null;
 
+  const host =
+    process.env.SMTP_HOST != null && String(process.env.SMTP_HOST).trim()
+      ? String(process.env.SMTP_HOST).trim()
+      : 'smtp-relay.brevo.com';
+  const portRaw = process.env.SMTP_PORT != null ? Number(String(process.env.SMTP_PORT).trim()) : NaN;
+  const port = Number.isFinite(portRaw) && portRaw > 0 ? portRaw : 2525;
+
   return nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 2525,
+    host,
+    port,
     secure: false,
     auth: {
-      user: process.env.SMTP_USER.trim(),
-      pass: process.env.SMTP_PASS.trim()
+      user: userTrim,
+      pass: passTrim
     },
     authMethod: 'LOGIN',
     connectionTimeout: 15_000,
@@ -444,10 +480,15 @@ async function sendVerificationEmail(toEmail, verificationToken) {
   }
 
   const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
+  const fromAddr = getSmtpFromAddress();
+  if (!fromAddr) {
+    console.error('SMTP_FROM (o MAIL_FROM) no definido en .env; no se envía el correo de verificación.');
+    return;
+  }
   try {
     await raceWithTimeout(
       transport.sendMail({
-        from: 'teni256gt@gmail.com',
+        from: fromAddr,
         to: toEmail,
         subject: 'Verifica tu cuenta en ProyectWeb',
         text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
@@ -482,7 +523,7 @@ const upload = multer({
   }
 });
 
-app.post('/api/uploads/image', authRequired, adminRequired, upload.single('image'), (req, res, next) => {
+app.post('/api/uploads/image', authRequired, isAdmin, upload.single('image'), (req, res, next) => {
   if (!req.file) return res.status(400).json({ error: 'No se envió ningún archivo' });
   const base = (process.env.BACKEND_PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
   const url = `${base}/uploads/${encodeURIComponent(req.file.filename)}`;
@@ -519,7 +560,7 @@ const productSchema = z.object({
   )
 });
 
-app.post('/api/admin/products', authRequired, adminRequired, async (req, res) => {
+app.post('/api/admin/products', authRequired, isAdmin, async (req, res) => {
   const normalized = normalizeProductBody(req.body);
   const parsed = productSchema.safeParse(normalized);
   if (!parsed.success) {
@@ -550,7 +591,7 @@ app.post('/api/admin/products', authRequired, adminRequired, async (req, res) =>
   });
 });
 
-app.put('/api/admin/products/:id', authRequired, adminRequired, async (req, res) => {
+app.put('/api/admin/products/:id', authRequired, isAdmin, async (req, res) => {
   const normalized = normalizeProductBody(req.body);
   const parsed = productSchema.safeParse(normalized);
   if (!parsed.success) {
@@ -577,7 +618,7 @@ app.put('/api/admin/products/:id', authRequired, adminRequired, async (req, res)
   });
 });
 
-app.delete('/api/admin/products/:id', authRequired, adminRequired, async (req, res) => {
+app.delete('/api/admin/products/:id', authRequired, isAdmin, async (req, res) => {
   const id = req.params.id;
   return dbReadWrite(async (db) => {
     const p = db.data.products.find(x => x.id === id && x.active !== false);
@@ -875,10 +916,10 @@ app.get('/api/my/orders', authRequired, async (req, res) => {
 app.get('/api/orders', authRequired, async (req, res) => {
   const db = await dbPromise;
   await db.read();
-  const isAdmin = req.user.role === 'ADMIN';
+  const userIsAdmin = isAdministratorRole(req.user.role);
 
   let orders = db.data.orders || [];
-  if (!isAdmin) orders = orders.filter(o => o.user_id === req.user.sub);
+  if (!userIsAdmin) orders = orders.filter(o => o.user_id === req.user.sub);
   orders = [...orders].sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
 
   const out = orders.map(o => ({
@@ -902,8 +943,8 @@ app.get('/api/orders/:id', authRequired, async (req, res) => {
   await db.read();
   const o = (db.data.orders || []).find(x => x.id === id);
   if (!o) return res.status(404).json({ error: 'Not found' });
-  const isAdmin = req.user.role === 'ADMIN';
-  if (!isAdmin && o.user_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' });
+  const userIsAdmin = isAdministratorRole(req.user.role);
+  if (!userIsAdmin && o.user_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' });
   return res.json({
     id: o.id,
     date: o.created_at,
@@ -921,7 +962,7 @@ const trackingSchema = z.object({
   carrier: z.string().min(1).max(60),
   tracking_number: z.string().min(3).max(80)
 });
-app.put('/api/admin/orders/:id/tracking', authRequired, adminRequired, async (req, res) => {
+app.put('/api/admin/orders/:id/tracking', authRequired, isAdmin, async (req, res) => {
   const body = req.body || {};
   const normalized = { carrier: body.carrier, tracking_number: body.tracking_number ?? body.number };
   const parsed = trackingSchema.safeParse(normalized);
@@ -1011,7 +1052,7 @@ app.post('/api/mp/webhook', express.json({ type: '*/*' }), async (req, res) => {
 });
 
 // ---- Admin stats/export ----
-app.get('/api/admin/stats', authRequired, adminRequired, async (req, res) => {
+app.get('/api/admin/stats', authRequired, isAdmin, async (req, res) => {
   const db = await dbPromise;
   await db.read();
   const totalProducts = (db.data.products || []).filter(p => p.active !== false).length;
@@ -1020,7 +1061,7 @@ app.get('/api/admin/stats', authRequired, adminRequired, async (req, res) => {
   return res.json({ totalProducts, totalUsers, totalSales: mxnFromCents(totalSalesCents) });
 });
 
-app.get('/api/admin/export', authRequired, adminRequired, async (req, res) => {
+app.get('/api/admin/export', authRequired, isAdmin, async (req, res) => {
   const db = await dbPromise;
   await db.read();
   return res.json({
@@ -1036,7 +1077,7 @@ function mapUser(u) {
     id: u.id,
     email: u.email,
     name: u.name,
-    role: u.role || 'CLIENT',
+    role: normalizeStoredRole(u.role ?? 'user'),
     active: u.active !== false,
     isVerified: u.isVerified !== false,
     created_at: u.created_at
@@ -1057,7 +1098,7 @@ function stripSensitiveFields(value) {
   return value;
 }
 
-app.get('/api/admin/users', authRequired, adminRequired, async (req, res) => {
+app.get('/api/admin/users', authRequired, isAdmin, async (req, res) => {
   const db = await dbPromise;
   await db.read();
   const list = (db.data.users || []).map(mapUser);
@@ -1068,24 +1109,26 @@ const createUserSchema = z.object({
   email: z.string().trim().email().transform(s => s.toLowerCase()),
   password: z.string().min(6, 'Mínimo 6 caracteres'),
   name: z.string().min(1).max(80),
-  role: z.enum(['ADMIN', 'CLIENT']).default('CLIENT')
+  role: z.string().optional()
 });
 
-app.post('/api/admin/users', authRequired, adminRequired, async (req, res) => {
+app.post('/api/admin/users', authRequired, isAdmin, async (req, res) => {
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
-  const { email, password, name, role } = parsed.data;
+  const { email, password, name, role: roleRaw } = parsed.data;
+  const role = normalizeStoredRole(roleRaw ?? 'user');
   return dbReadWrite(async (db) => {
     const emailLower = String(email).toLowerCase();
     if ((db.data.users || []).some(u => String(u.email || '').toLowerCase() === emailLower)) {
       return res.status(409).json({ error: 'El correo ya está registrado' });
     }
+    const password_hash = await bcrypt.hash(password, 10);
     const user = {
       id: nanoid(),
       email: emailLower,
       name: String(name).trim(),
-      password_hash: bcrypt.hashSync(password, 10),
-      role: role,
+      password_hash,
+      role,
       active: true,
       isVerified: true,
       verificationToken: null,
@@ -1099,11 +1142,11 @@ app.post('/api/admin/users', authRequired, adminRequired, async (req, res) => {
 const updateUserSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   email: z.string().trim().email().transform(s => s.toLowerCase()).optional(),
-  role: z.enum(['ADMIN', 'CLIENT']).optional(),
+  role: z.string().optional(),
   active: z.boolean().optional()
 });
 
-app.put('/api/admin/users/:id', authRequired, adminRequired, async (req, res) => {
+app.put('/api/admin/users/:id', authRequired, isAdmin, async (req, res) => {
   const parsed = updateUserSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
   const id = req.params.id;
@@ -1121,7 +1164,7 @@ app.put('/api/admin/users/:id', authRequired, adminRequired, async (req, res) =>
       }
       user.email = emailLower;
     }
-    if (parsed.data.role !== undefined) user.role = parsed.data.role;
+    if (parsed.data.role !== undefined) user.role = normalizeStoredRole(parsed.data.role);
     if (parsed.data.active !== undefined) user.active = !!parsed.data.active;
     return res.json(mapUser(user));
   });
@@ -1129,19 +1172,19 @@ app.put('/api/admin/users/:id', authRequired, adminRequired, async (req, res) =>
 
 const resetPasswordSchema = z.object({ newPassword: z.string().min(6, 'Mínimo 6 caracteres') });
 
-app.post('/api/admin/users/:id/reset-password', authRequired, adminRequired, async (req, res) => {
+app.post('/api/admin/users/:id/reset-password', authRequired, isAdmin, async (req, res) => {
   const parsed = resetPasswordSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
   const id = req.params.id;
   return dbReadWrite(async (db) => {
     const user = (db.data.users || []).find(u => u.id === id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-    user.password_hash = bcrypt.hashSync(parsed.data.newPassword, 10);
+    user.password_hash = await bcrypt.hash(parsed.data.newPassword, 10);
     return res.json({ ok: true });
   });
 });
 
-app.delete('/api/admin/users/:id', authRequired, adminRequired, async (req, res) => {
+app.delete('/api/admin/users/:id', authRequired, isAdmin, async (req, res) => {
   const id = req.params.id;
   if (req.user.sub === id) {
     return res.status(403).json({ error: 'No puedes eliminar tu propia cuenta' });
@@ -1178,9 +1221,14 @@ app.post('/api/contact', async (req, res) => {
     return res.status(503).json({ error: 'Correo no configurado. Configura CONTACT_TO y SMTP_* en .env' });
   }
 
+  const mailFrom = getSmtpFromAddress();
+  if (!mailFrom) {
+    return res.status(503).json({ error: 'Configura SMTP_FROM (o MAIL_FROM) en .env para el remitente del correo.' });
+  }
+
   try {
     await transport.sendMail({
-      from: 'teni256gt@gmail.com',
+      from: mailFrom,
       to,
       subject: `Contacto ProyectWeb — ${name}`,
       replyTo: email,
@@ -1207,12 +1255,13 @@ app.post('/api/dev/seed', async (req, res) => {
   return dbReadWrite(async (db) => {
     const adminEmail = 'admin@proyectweb.local';
     if (!db.data.users.find(u => u.email === adminEmail)) {
+      const password_hash = await bcrypt.hash('admin123', 10);
       db.data.users.push({
         id: nanoid(),
         email: adminEmail,
         name: 'Admin',
-        password_hash: bcrypt.hashSync('admin123', 10),
-        role: 'ADMIN',
+        password_hash,
+        role: 'admin',
         isVerified: true,
         verificationToken: null,
         created_at: nowISO()
@@ -1242,6 +1291,23 @@ app.post('/api/dev/seed', async (req, res) => {
       console.log('[dev/seed] Usuario admin: admin@proyectweb.local (contraseña por defecto en código de seed; no exponer en producción)');
     }
     return res.json({ ok: true, message: 'Datos de ejemplo cargados correctamente.' });
+  });
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  console.error('[error]', err && err.stack ? err.stack : err);
+  const dev = (process.env.NODE_ENV || '').toLowerCase() === 'development';
+  const status =
+    err && Number(err.status) >= 400 && Number(err.status) < 600 ? Number(err.status) : 500;
+  if (dev) {
+    return res.status(status).json({
+      error: err.message || 'Error interno del servidor',
+      ...(err.code && { code: err.code })
+    });
+  }
+  return res.status(status).json({
+    error: 'Ha ocurrido un error. Inténtalo de nuevo más tarde.'
   });
 });
 

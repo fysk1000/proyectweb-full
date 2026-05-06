@@ -3,8 +3,12 @@ import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { openDb } from './db.js';
 
-function nowISO(){ return new Date().toISOString(); }
-function centsFromMXN(val){ return Math.round(Number(val) * 100); }
+function nowISO() {
+  return new Date().toISOString();
+}
+function centsFromMXN(val) {
+  return Math.round(Number(val) * 100);
+}
 
 const db = await openDb();
 await db.read();
@@ -14,28 +18,29 @@ db.data ||= { users: [], products: [], orders: [], contact_messages: [], mp_noti
 const adminEmail = 'admin@proyectweb.local';
 const adminName = 'Admin ProyectWeb';
 const adminPassword = 'admin123';
-const adminPasswordHash = bcrypt.hashSync(adminPassword, 10);
 
 let admin = db.data.users.find(u => u.email === adminEmail);
 if (!admin) {
+  const password_hash = await bcrypt.hash(adminPassword, 10);
   admin = {
     id: nanoid(),
     email: adminEmail,
     name: adminName,
-    password_hash: adminPasswordHash,
-    role: 'ADMIN', // Usuario administrador real; el frontend solo muestra panel admin si /api/auth/me devuelve role ADMIN
+    password_hash,
+    role: 'admin',
     created_at: nowISO()
   };
   db.data.users.push(admin);
   console.log('Admin creado:', adminEmail, 'pass:', adminPassword);
 } else {
   let updated = false;
-  if (admin.role !== 'ADMIN') {
-    admin.role = 'ADMIN';
+  if (String(admin.role || '').toLowerCase() !== 'admin') {
+    admin.role = 'admin';
     updated = true;
   }
-  if (!bcrypt.compareSync(adminPassword, admin.password_hash)) {
-    admin.password_hash = adminPasswordHash;
+  const match = await bcrypt.compare(adminPassword, admin.password_hash || '');
+  if (!match) {
+    admin.password_hash = await bcrypt.hash(adminPassword, 10);
     updated = true;
   }
   if (admin.name !== adminName) {

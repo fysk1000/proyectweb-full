@@ -26,6 +26,11 @@ const App = (function() {
   } catch (_) {}
 
   const isDev = typeof window !== 'undefined' && (!window.__ENV__ || window.__ENV__.NODE_ENV !== 'production');
+
+  /** Rol API: admin / ADMIN (legado). La UI sigue usando STORAGE_ROLE ADMIN | CLIENT. */
+  function backendRoleIsAdmin(role) {
+    return String(role || '').toLowerCase() === 'admin';
+  }
   /** Modo demo: solo activo con ?demo=1 en la URL. No simula compra si no está activo. */
   function isDemoMode() {
     try {
@@ -455,11 +460,18 @@ const App = (function() {
     try {
       const res = await window.ProyectWebAPI.getMe(token);
       if (res && res.user) {
-        const role = res.user.role === 'ADMIN' ? 'ADMIN' : 'CLIENT';
+        const role = backendRoleIsAdmin(res.user.role) ? 'ADMIN' : 'CLIENT';
         try {
           localStorage.setItem(STORAGE_LOGIN, 'true');
           localStorage.setItem(STORAGE_USER, typeof res.user === 'string' ? res.user : JSON.stringify(res.user));
           localStorage.setItem(STORAGE_ROLE, role);
+          if (role === 'ADMIN') {
+            localStorage.setItem(STORAGE_ADMIN_TOKEN, token);
+            localStorage.removeItem(STORAGE_CLIENT_TOKEN);
+          } else {
+            localStorage.setItem(STORAGE_CLIENT_TOKEN, token);
+            localStorage.removeItem(STORAGE_ADMIN_TOKEN);
+          }
         } catch (_) {}
         if (role === 'ADMIN') {
           adminToken = token;
@@ -939,7 +951,7 @@ const App = (function() {
           }
           if (isDev) console.debug('[login] ok', res.user.role);
           useBackend = true;
-          const role = res.user.role === 'ADMIN' ? 'ADMIN' : 'CLIENT';
+          const role = backendRoleIsAdmin(res.user.role) ? 'ADMIN' : 'CLIENT';
           const userToStore = { id: res.user.id, email: res.user.email, name: res.user.name, role: res.user.role };
           try {
             localStorage.setItem(STORAGE_LOGIN, 'true');
@@ -1558,7 +1570,7 @@ const App = (function() {
       <tr class="hover:bg-slate-50">
         <td class="px-4 py-3 text-slate-700">${(user.email || '').replace(/</g, '&lt;')}</td>
         <td class="px-4 py-3 font-medium text-slate-900">${(user.name || '—').replace(/</g, '&lt;')}</td>
-        <td class="px-4 py-3 text-slate-700">${user.role || 'CLIENT'}</td>
+        <td class="px-4 py-3 text-slate-700">${user.role || 'user'}</td>
         <td class="px-4 py-3">${user.active !== false ? '<span class="text-green-600">Activo</span>' : '<span class="text-slate-500">Inactivo</span>'}</td>
         <td class="px-4 py-3">
           <div class="flex flex-wrap gap-2">
@@ -1667,7 +1679,7 @@ const App = (function() {
       document.getElementById('user-id').value = user.id;
       document.getElementById('user-email').value = user.email || '';
       document.getElementById('user-name').value = user.name || '';
-      document.getElementById('user-role').value = user.role === 'ADMIN' ? 'ADMIN' : 'CLIENT';
+      document.getElementById('user-role').value = backendRoleIsAdmin(user.role) ? 'admin' : 'user';
       if (passwordWrap) passwordWrap.classList.add('hidden');
       if (passwordInput) passwordInput.removeAttribute('required');
     } else {
@@ -1711,11 +1723,11 @@ const App = (function() {
         if (!adminToken || typeof window.ProyectWebAPI === 'undefined') { toast('Backend no disponible', 'error'); return; }
         try {
           if (id) {
-            const payload = { name, email, role: role || 'CLIENT' };
+            const payload = { name, email, role: role === 'admin' ? 'admin' : 'user' };
             await window.ProyectWebAPI.updateUser(id, payload, adminToken);
             toast('Usuario actualizado', 'success');
           } else {
-            await window.ProyectWebAPI.createUser({ email, password, name, role: role || 'CLIENT' }, adminToken);
+            await window.ProyectWebAPI.createUser({ email, password, name, role: role === 'admin' ? 'admin' : 'user' }, adminToken);
             toast('Usuario creado', 'success');
           }
           closeUserModal();

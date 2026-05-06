@@ -1034,9 +1034,10 @@
       const me = await API.getMe(token);
       if (me && me.user) {
         const email = (me.user.email || '').toLowerCase();
-        const isAdmin = email === ADMIN_EMAIL;
+        const isAdminByRole = String(me.user.role || '').toLowerCase() === 'admin';
+        const isAdmin = isAdminByRole || email === ADMIN_EMAIL;
         const name = me.user.name || me.user.email || 'Usuario';
-        const role = (me.user.role || (isAdmin ? 'ADMIN' : 'CLIENT')).toUpperCase();
+        const role = isAdmin ? 'ADMIN' : 'CLIENT';
         setStoredChatName(name);
         return { level: isAdmin ? 'admin' : 'client', name, email, isAdmin, role };
       }

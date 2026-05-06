@@ -63,7 +63,13 @@ export function authRequired(req, res, next) {
   }
 }
 
-export function adminRequired(req, res, next) {
+/** Acepta rol almacenado como admin o ADMIN (legado). */
+export function isAdministratorRole(role) {
+  return String(role || '').toLowerCase() === 'admin';
+}
+
+/** Middleware: solo usuarios con rol administrador (JWT). */
+export function isAdmin(req, res, next) {
   if (!req.user) {
     return res.status(401).json({
       error: 'No autorizado',
@@ -71,7 +77,7 @@ export function adminRequired(req, res, next) {
       code: 'AUTH_REQUIRED'
     });
   }
-  if (req.user.role !== 'ADMIN') {
+  if (!isAdministratorRole(req.user.role)) {
     return res.status(403).json({
       error: 'No permitido',
       message: 'Se requiere rol de administrador.',
@@ -80,6 +86,9 @@ export function adminRequired(req, res, next) {
   }
   return next();
 }
+
+/** @deprecated Usar isAdmin */
+export const adminRequired = isAdmin;
 
 /**
  * Si no hay cabecera Authorization, continúa con req.bearerUser = null (invitado).

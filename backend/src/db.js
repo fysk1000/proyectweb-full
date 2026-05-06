@@ -7,8 +7,11 @@ import { fileURLToPath } from 'url';
 // Configuramos el __dirname para ESM
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// LA CLAVE: Subimos un nivel desde 'src' para encontrar 'data.json' en la raíz de 'backend'
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data.json');
+// Ruta LowDB: DB_URL o DB_PATH desde process.env, o data.json por defecto
+const DB_PATH =
+  (process.env.DB_URL && String(process.env.DB_URL).trim()) ||
+  (process.env.DB_PATH && String(process.env.DB_PATH).trim()) ||
+  path.join(__dirname, '..', 'data.json');
 
 const defaultData = {
   users: [],
