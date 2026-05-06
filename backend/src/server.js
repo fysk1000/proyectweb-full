@@ -336,7 +336,7 @@ function readEnvTrim(name) {
 }
 
 /** Tiempo máximo de envío (raceWithTimeout) alineado con timeouts del transporter Brevo. */
-const SMTP_TIMEOUT_MS = 8000;
+const SMTP_TIMEOUT_MS = 15_000;
 
 /** Log detallado de errores nodemailer / red (útil en Render y depuración). */
 function logSmtpError(context, err) {
@@ -353,25 +353,27 @@ function logSmtpError(context, err) {
 }
 
 /**
- * Transporte SMTP Brevo (smtp-relay.brevo.com:587). Credenciales: SMTP_USER, SMTP_PASS (trim).
- * Remitente en sendMail: dirección fija verificada en Brevo (cadena simple, sin nombre extra).
+ * Transporte SMTP Brevo (smtp-relay.brevo.com:2525, STARTTLS).
+ * auth.user = SMTP_USER (ID Brevo, ej. aa5b2e001…); sendMail.from = correo verificado teni256gt@gmail.com.
  */
 function getTransport() {
-  const user = process.env.SMTP_USER != null ? process.env.SMTP_USER.trim() : '';
-  const pass = process.env.SMTP_PASS != null ? process.env.SMTP_PASS.trim() : '';
-  if (!user || !pass) return null;
+  if (process.env.SMTP_USER == null || process.env.SMTP_PASS == null) return null;
+  const userTrim = process.env.SMTP_USER.trim();
+  const passTrim = process.env.SMTP_PASS.trim();
+  if (!userTrim || !passTrim) return null;
 
   return nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
-    port: 587,
+    port: 2525,
     secure: false,
     auth: {
-      user,
-      pass
+      user: process.env.SMTP_USER.trim(),
+      pass: process.env.SMTP_PASS.trim()
     },
-    debug: true,
-    logger: true,
     authMethod: 'LOGIN',
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 15_000,
     tls: {
       rejectUnauthorized: false,
       minVersion: 'TLSv1.2'
@@ -425,16 +427,22 @@ function mapMailErrorToHttp(err) {
   return { status: 503, message: 'No se pudo enviar el correo de verificación. Inténtalo más tarde.', code: 'SMTP_SEND_FAILED' };
 }
 
-/** Envía enlace GET /api/auth/verify?token=… (usa BACKEND_PUBLIC_URL para el href). */
+/** Envía enlace GET /api/auth/verify?token=… (usa BACKEND_PUBLIC_URL para el href). No lanza: el registro puede responder 201 igual. */
 async function sendVerificationEmail(toEmail, verificationToken) {
   const transport = getTransport();
   if (!transport) {
-    const e = new Error('SMTP no configurado');
-    e.code = 'SMTP_NOT_CONFIGURED';
-    throw e;
+    console.error('Error en SMTP Brevo:', Object.assign(new Error('SMTP no configurado (SMTP_USER/SMTP_PASS)'), { code: 'SMTP_NOT_CONFIGURED' }));
+    return;
   }
 
-  const base = getBackendPublicUrlForVerification();
+  let base;
+  try {
+    base = getBackendPublicUrlForVerification();
+  } catch (err) {
+    console.error('Error en SMTP Brevo:', err);
+    return;
+  }
+
   const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
   try {
     await raceWithTimeout(
@@ -447,7 +455,7 @@ async function sendVerificationEmail(toEmail, verificationToken) {
       }),
       SMTP_TIMEOUT_MS,
       'ETIMEDOUT',
-      'Tiempo de espera al conectar o enviar por SMTP (8 s).'
+      'Tiempo de espera al conectar o enviar por SMTP (15 s).'
     );
   } catch (err) {
     console.error('Error en SMTP Brevo:', err);
