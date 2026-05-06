@@ -354,7 +354,7 @@ function logSmtpError(context, err) {
 
 /**
  * Transporte SMTP Brevo (alta disponibilidad): SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS.
- * Remitente en sendMail: process.env.SMTP_USER.
+ * Remitente en sendMail: dirección fija verificada en Brevo (cadena simple, sin nombre extra).
  */
 function getTransport() {
   const host = process.env.SMTP_HOST != null ? String(process.env.SMTP_HOST).trim() : '';
@@ -440,7 +440,7 @@ async function sendVerificationEmail(toEmail, verificationToken) {
   try {
     await raceWithTimeout(
       transport.sendMail({
-        from: process.env.SMTP_USER,
+        from: 'teni256gt@gmail.com',
         to: toEmail,
         subject: 'Verifica tu cuenta en ProyectWeb',
         text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
@@ -1173,7 +1173,7 @@ app.post('/api/contact', async (req, res) => {
 
   try {
     await transport.sendMail({
-      from: process.env.SMTP_USER,
+      from: 'teni256gt@gmail.com',
       to,
       subject: `Contacto ProyectWeb — ${name}`,
       replyTo: email,
