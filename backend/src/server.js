@@ -353,30 +353,28 @@ function logSmtpError(context, err) {
 }
 
 /**
- * Transporte SMTP Brevo (alta disponibilidad): SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS.
+ * Transporte SMTP Brevo (smtp-relay.brevo.com:587). Credenciales: SMTP_USER, SMTP_PASS (trim).
  * Remitente en sendMail: dirección fija verificada en Brevo (cadena simple, sin nombre extra).
  */
 function getTransport() {
-  const host = process.env.SMTP_HOST != null ? String(process.env.SMTP_HOST).trim() : '';
-  const user = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
-  const pass = process.env.SMTP_PASS != null ? String(process.env.SMTP_PASS).trim() : '';
-  if (!host || !user || !pass) return null;
-
-  const portParsed = parseInt(process.env.SMTP_PORT, 10);
-  const port = Number.isFinite(portParsed) && portParsed > 0 ? portParsed : 587;
+  const user = process.env.SMTP_USER != null ? process.env.SMTP_USER.trim() : '';
+  const pass = process.env.SMTP_PASS != null ? process.env.SMTP_PASS.trim() : '';
+  if (!user || !pass) return null;
 
   return nodemailer.createTransport({
-    host,
-    port,
+    host: 'smtp-relay.brevo.com',
+    port: 587,
     secure: false,
-    tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
-    connectionTimeout: 8000,
-    greetingTimeout: 8000,
-    socketTimeout: 8000,
-    authMethod: 'PLAIN',
     auth: {
-      user: process.env.SMTP_USER != null ? process.env.SMTP_USER.trim() : '',
-      pass: process.env.SMTP_PASS != null ? process.env.SMTP_PASS.trim() : ''
+      user,
+      pass
+    },
+    debug: true,
+    logger: true,
+    authMethod: 'LOGIN',
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2'
     }
   });
 }
