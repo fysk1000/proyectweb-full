@@ -297,11 +297,12 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
       return res.status(403).json({ error: 'Por favor, verifica tu correo antes de iniciar sesión', code: 'EMAIL_NOT_VERIFIED' });
     }
 
+    const roleNorm = normalizeStoredRole(user.role ?? 'user');
     const token = signToken({
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: roleNorm,
       isVerified: user.isVerified !== false
     });
     return res.status(200).json({
@@ -310,7 +311,7 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: roleNorm,
         isVerified: user.isVerified !== false
       }
     });
@@ -326,7 +327,7 @@ app.get('/api/auth/me', authRequired, (req, res) => {
       id: u.sub,
       email: u.email,
       name: u.name,
-      role: u.role,
+      role: normalizeStoredRole(u.role ?? 'user'),
       isVerified: u.emailVerified !== false
     }
   });
@@ -1297,10 +1298,9 @@ app.post('/api/dev/seed', async (req, res) => {
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   console.error('[error]', err && err.stack ? err.stack : err);
-  const dev = (process.env.NODE_ENV || '').toLowerCase() === 'development';
   const status =
     err && Number(err.status) >= 400 && Number(err.status) < 600 ? Number(err.status) : 500;
-  if (dev) {
+  if (isDev) {
     return res.status(status).json({
       error: err.message || 'Error interno del servidor',
       ...(err.code && { code: err.code })

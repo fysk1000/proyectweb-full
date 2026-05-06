@@ -28,6 +28,8 @@ if (!admin) {
     name: adminName,
     password_hash,
     role: 'admin',
+    isVerified: true,
+    verificationToken: null,
     created_at: nowISO()
   };
   db.data.users.push(admin);
