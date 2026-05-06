@@ -335,8 +335,8 @@ function readEnvTrim(name) {
   return String(v).trim();
 }
 
-/** Tiempo máximo de conexión/envío SMTP y carrera con raceWithTimeout(sendMail). */
-const SMTP_TIMEOUT_MS = 60_000;
+/** Tiempo máximo de envío (raceWithTimeout) alineado con timeouts del transporter Brevo. */
+const SMTP_TIMEOUT_MS = 8000;
 
 /** Log detallado de errores nodemailer / red (útil en Render y depuración). */
 function logSmtpError(context, err) {
@@ -353,8 +353,8 @@ function logSmtpError(context, err) {
 }
 
 /**
- * Transporte SMTP (Brevo u otro): SMTP_HOST, SMTP_USER, SMTP_PASS en Render.
- * El remitente (from en sendMail) debe ser exactamente la cuenta verificada en Brevo (= SMTP_USER).
+ * Transporte SMTP Brevo (alta disponibilidad): SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS.
+ * Remitente en sendMail: process.env.SMTP_USER.
  */
 function getTransport() {
   const host = process.env.SMTP_HOST != null ? String(process.env.SMTP_HOST).trim() : '';
@@ -362,13 +362,20 @@ function getTransport() {
   const pass = process.env.SMTP_PASS != null ? String(process.env.SMTP_PASS).trim() : '';
   if (!host || !user || !pass) return null;
 
+  const portParsed = parseInt(process.env.SMTP_PORT, 10);
+  const port = Number.isFinite(portParsed) && portParsed > 0 ? portParsed : 587;
+
   return nodemailer.createTransport({
     host,
-    port: 587,
+    port,
     secure: false,
+    tls: { rejectUnauthorized: false, minVersion: 'TLSv1.2' },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
     auth: {
-      user,
-      pass
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
     }
   });
 }
@@ -430,20 +437,22 @@ async function sendVerificationEmail(toEmail, verificationToken) {
 
   const base = getBackendPublicUrlForVerification();
   const verifyUrl = `${base}/api/auth/verify?token=${encodeURIComponent(verificationToken)}`;
-  /** Remitente: debe coincidir con la cuenta verificada en Brevo (misma que SMTP_USER). */
-  const fromAddr = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
-  await raceWithTimeout(
-    transport.sendMail({
-      from: fromAddr,
-      to: toEmail,
-      subject: 'Verifica tu cuenta en ProyectWeb',
-      text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
-      html: `<p>Hola,</p><p>Confirma tu correo pulsando el siguiente enlace:</p><p><a href="${verifyUrl}">Verificar mi cuenta</a></p><p>Si no creaste esta cuenta, ignora este mensaje.</p>`
-    }),
-    SMTP_TIMEOUT_MS,
-    'ETIMEDOUT',
-    'Tiempo de espera al conectar o enviar por SMTP (60 s).'
-  );
+  try {
+    await raceWithTimeout(
+      transport.sendMail({
+        from: process.env.SMTP_USER,
+        to: toEmail,
+        subject: 'Verifica tu cuenta en ProyectWeb',
+        text: `Hola,\n\nConfirma tu correo abriendo este enlace:\n${verifyUrl}\n\nSi no creaste esta cuenta, ignora este mensaje.`,
+        html: `<p>Hola,</p><p>Confirma tu correo pulsando el siguiente enlace:</p><p><a href="${verifyUrl}">Verificar mi cuenta</a></p><p>Si no creaste esta cuenta, ignora este mensaje.</p>`
+      }),
+      SMTP_TIMEOUT_MS,
+      'ETIMEDOUT',
+      'Tiempo de espera al conectar o enviar por SMTP (8 s).'
+    );
+  } catch (err) {
+    console.error('Error en SMTP Brevo:', err);
+  }
 }
 
 // ---- Uploads ----
@@ -1163,10 +1172,8 @@ app.post('/api/contact', async (req, res) => {
   }
 
   try {
-    /** Remitente: misma cuenta que SMTP_USER / Brevo verificado. */
-    const fromSmtp = process.env.SMTP_USER != null ? String(process.env.SMTP_USER).trim() : '';
     await transport.sendMail({
-      from: fromSmtp,
+      from: process.env.SMTP_USER,
       to,
       subject: `Contacto ProyectWeb — ${name}`,
       replyTo: email,
