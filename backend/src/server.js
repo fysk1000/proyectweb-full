@@ -373,9 +373,10 @@ function getTransport() {
     connectionTimeout: 8000,
     greetingTimeout: 8000,
     socketTimeout: 8000,
+    authMethod: 'PLAIN',
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
+      user: process.env.SMTP_USER != null ? process.env.SMTP_USER.trim() : '',
+      pass: process.env.SMTP_PASS != null ? process.env.SMTP_PASS.trim() : ''
     }
   });
 }
