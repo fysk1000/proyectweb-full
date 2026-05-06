@@ -62,8 +62,24 @@
     readingLine.style.transform = 'translateY(' + e.clientY + 'px)';
   }
 
-  function speakMainContent() {
-    if (!window.speechSynthesis) {
+  function isSpeechSynthesisAvailable() {
+    return (
+      typeof window !== 'undefined' &&
+      window.speechSynthesis &&
+      typeof window.speechSynthesis.speak === 'function' &&
+      typeof window.speechSynthesis.cancel === 'function'
+    );
+  }
+
+  /**
+   * Lectura por voz: debe llamarse solo desde un listener de click con gesto real del usuario.
+   * @param {MouseEvent} clickEvent
+   */
+  function speakMainContent(clickEvent) {
+    if (!clickEvent || clickEvent.type !== 'click' || clickEvent.isTrusted !== true) {
+      return;
+    }
+    if (!isSpeechSynthesisAvailable()) {
       window.alert('Tu navegador no admite lectura por voz (Web Speech API).');
       return;
     }
@@ -72,13 +88,23 @@
     var text = main.innerText || '';
     text = text.replace(/\s+/g, ' ').trim().slice(0, 8000);
     if (!text) return;
+
     window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
-    u.lang = 'es-ES';
+
+    var utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-ES';
     var voices = window.speechSynthesis.getVoices();
-    var es = voices.find(function (v) { return /^es/i.test(v.lang); });
-    if (es) u.voice = es;
-    window.speechSynthesis.speak(u);
+    var es = voices.find(function (v) {
+      return /^es/i.test(v.lang);
+    });
+    if (es) utterance.voice = es;
+
+    try {
+      window.speechSynthesis.resume();
+    } catch (_) {}
+
+    console.log('Iniciando lectura...');
+    window.speechSynthesis.speak(utterance);
   }
 
   function buildUI() {
@@ -171,9 +197,11 @@
       applyBodyClasses();
     });
 
-    document.getElementById('a11y-speak').addEventListener('click', speakMainContent);
+    document.getElementById('a11y-speak').addEventListener('click', function (e) {
+      speakMainContent(e);
+    });
     document.getElementById('a11y-stop-speak').addEventListener('click', function () {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (isSpeechSynthesisAvailable()) window.speechSynthesis.cancel();
     });
 
     document.addEventListener('mousemove', onMouseMove, { passive: true });
@@ -202,7 +230,14 @@
     });
   });
 
-  if (window.speechSynthesis) {
-    window.speechSynthesis.addEventListener('voiceschanged', function () {}, { once: true });
+  if (isSpeechSynthesisAvailable()) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.addEventListener(
+      'voiceschanged',
+      function () {
+        window.speechSynthesis.getVoices();
+      },
+      { once: true }
+    );
   }
 })();
