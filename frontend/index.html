@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="media-src 'self' https://interactive-examples.mdn.mozilla.net blob: data:;">
   <title>ProyectWeb — Tienda online de tecnología</title>
   <meta name="description" content="ProyectWeb: tienda online de tecnología. Auriculares, teclados, monitores, ratones, webcams y más. Envíos en México. Precios en pesos mexicanos.">
   <!-- Tailwind CSS: CDN oficial en el head (diseño responsivo Mobile First) -->
@@ -262,10 +263,9 @@
         </div>
         <figure class="max-w-3xl mx-auto my-8 sm:my-10">
           <figcaption class="text-sm text-slate-600 mb-2 text-center">Vídeo de demostración con subtítulos WebVTT</figcaption>
-          <video class="w-full rounded-xl border border-slate-200 bg-black aspect-video" controls playsinline preload="metadata">
-            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm" type="video/webm">
+          <video class="w-full max-w-full rounded-xl border border-slate-200 bg-black aspect-video" controls playsinline preload="metadata">
             <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
-            <track kind="subtitles" srclang="es" label="Español" src="./media/sample-es.vtt" default>
+            <track kind="subtitles" src="/subtitles.vtt" srclang="es" label="Español" default>
             <p class="text-white p-4 text-sm">Tu navegador no admite vídeo HTML5.</p>
           </video>
         </figure>

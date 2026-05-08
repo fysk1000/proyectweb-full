@@ -102,6 +102,7 @@ app.use(
         "script-src": ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
         "style-src": ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
         "img-src": ["'self'", "data:", "https:"],
+        "media-src": ["'self'", "https://interactive-examples.mdn.mozilla.net", "blob:", "data:"],
         "frame-src": ["'self'", "https://www.google.com"],
         "font-src": ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
       },
@@ -138,6 +139,10 @@ app.use('/uploads', (req, res, next) => {
 const frontendDir = path.join(__dirname, '..', '..', 'frontend');
 if (fs.existsSync(frontendDir)) {
   app.use('/frontend', express.static(frontendDir, { index: false }));
+  app.get('/subtitles.vtt', (req, res) => {
+    res.type('text/vtt');
+    res.sendFile(path.join(frontendDir, 'subtitles.vtt'));
+  });
 }
 
 app.get('/health', (req, res) => res.json({ ok: true }));
@@ -205,7 +210,9 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const verificationToken = nanoid();
-    const password_hash = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('DEBUG: Contraseña encriptada para el usuario:', hashedPassword);
+    const password_hash = hashedPassword;
     const user = {
       id: nanoid(),
       email,
