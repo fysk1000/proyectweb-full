@@ -43,6 +43,32 @@ const App = (function() {
   const INLINE_FALLBACK_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
   const DEFAULT_PRODUCT_IMAGE = PLACEHOLDER_IMAGE;
 
+  function getUploadsBaseUrl() {
+    let base = '';
+    try {
+      if (typeof window !== 'undefined' && window.ProyectWebAPI && typeof window.ProyectWebAPI.getBase === 'function') {
+        base = String(window.ProyectWebAPI.getBase() || '').replace(/\/$/, '');
+      } else if (typeof window !== 'undefined' && window.__ENV__ && window.__ENV__.API_BASE) {
+        base = String(window.__ENV__.API_BASE).replace(/\/$/, '');
+      }
+    } catch (_) {}
+    return base ? (base + '/uploads/') : '/uploads/';
+  }
+
+  function normalizeProductImageUrl(rawImage) {
+    const value = String(rawImage || '').trim();
+    if (!value) return DEFAULT_PRODUCT_IMAGE;
+    if (/^data:image\//i.test(value)) return value;
+    if (/^https?:\/\/(localhost|127\.0\.0\.1):5050\/uploads\//i.test(value)) {
+      const fileName = value.replace(/^https?:\/\/(localhost|127\.0\.0\.1):5050\/uploads\/?/i, '');
+      return getUploadsBaseUrl() + fileName;
+    }
+    if (/^https?:\/\//i.test(value)) return value;
+    if (value.startsWith('/uploads/')) return value;
+    if (value.startsWith('/')) return value;
+    return getUploadsBaseUrl() + encodeURIComponent(value);
+  }
+
   function bindImageFallback(imgEl, fallbackSrc) {
     imgEl.addEventListener('error', function onImgError() {
       const currentSrc = imgEl.currentSrc || imgEl.src || '';
@@ -569,7 +595,7 @@ const App = (function() {
     const productMap = Object.fromEntries(PRODUCTS.map(p => [p.id, p]));
     listEl.innerHTML = cart.map(item => {
       const product = productMap[item.id];
-      const img = product ? product.image : DEFAULT_PRODUCT_IMAGE;
+      const img = product ? normalizeProductImageUrl(product.image) : DEFAULT_PRODUCT_IMAGE;
       const nameEsc = escapeHtmlAttr(item.name || 'Producto');
       const imgAlt = escapeHtmlAttr(`Imagen de ${item.name || 'producto'}`);
       return `
@@ -888,7 +914,7 @@ const App = (function() {
       return;
     }
     container.innerHTML = PRODUCTS.map(p => {
-      const imgSrc = p.image || DEFAULT_PRODUCT_IMAGE;
+      const imgSrc = normalizeProductImageUrl(p.image);
       const altText = escapeHtmlAttr(p.name ? `Fotografía de ${p.name}` : 'Producto del catálogo');
       return `
       <article class="product-card">

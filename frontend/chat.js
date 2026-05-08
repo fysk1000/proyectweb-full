@@ -247,6 +247,11 @@
     const img = product && (product.image || product.image_url);
     if (!img) return '';
     const s = String(img).trim();
+    if (/^https?:\/\/(localhost|127\.0\.0\.1):5050\/uploads\//i.test(s)) {
+      const baseForUploads = getBase().replace(/\/$/, '');
+      const fileName = s.replace(/^https?:\/\/(localhost|127\.0\.0\.1):5050\/uploads\/?/i, '');
+      return (baseForUploads ? baseForUploads : '') + '/uploads/' + fileName;
+    }
     if (/^https?:\/\//i.test(s)) return s;
     const base = getBase().replace(/\/$/, '');
     return s.startsWith('/') ? base + s : base + '/uploads/' + encodeURIComponent(s);
