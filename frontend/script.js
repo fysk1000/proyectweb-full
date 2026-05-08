@@ -20,6 +20,7 @@ const App = (function() {
   let clientToken = null;
   let selectedPaymentMethod = 'none'; // 'none' | 'stripe'
   let ADMIN_USERS = [];
+  let pending2FAEmail = '';
   try {
     adminToken = localStorage.getItem(STORAGE_ADMIN_TOKEN);
     clientToken = localStorage.getItem(STORAGE_CLIENT_TOKEN);
@@ -89,6 +90,18 @@ const App = (function() {
 
       imgEl.removeEventListener('error', onImgError);
     });
+  }
+
+  function initGlobalUploadsImageFallback() {
+    document.addEventListener('error', function onAnyImageError(event) {
+      const imgEl = event.target;
+      if (!(imgEl instanceof HTMLImageElement)) return;
+      if (imgEl.dataset.uploadsFallbackApplied === '1') return;
+      const src = String(imgEl.currentSrc || imgEl.src || '').trim();
+      if (!src || !/\/uploads\//i.test(src)) return;
+      imgEl.dataset.uploadsFallbackApplied = '1';
+      imgEl.src = PLACEHOLDER_IMAGE;
+    }, true);
   }
 
   const priceFormat = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
@@ -952,21 +965,88 @@ const App = (function() {
   function initLoginModal() {
     const modal = document.getElementById('login-modal');
     const form = document.getElementById('login-form');
+    const form2FA = document.getElementById('login-2fa-form');
+    const codeInput = document.getElementById('login-2fa-code');
+    const back2FABtn = document.getElementById('login-2fa-back');
     const closeBtn = document.getElementById('login-modal-close');
     const btnLogin = document.getElementById('btn-login');
     const btnLoginMobile = document.getElementById('btn-login-mobile');
+    const showLoginForm = () => {
+      pending2FAEmail = '';
+      if (form) form.classList.remove('hidden');
+      if (form2FA) form2FA.classList.add('hidden');
+      if (codeInput) codeInput.value = '';
+    };
+    const show2FAForm = (email) => {
+      pending2FAEmail = String(email || '').trim().toLowerCase();
+      if (form) form.classList.add('hidden');
+      if (form2FA) form2FA.classList.remove('hidden');
+      if (codeInput) {
+        codeInput.value = '';
+        codeInput.focus();
+      }
+    };
+    const completeLogin = async (res) => {
+      if (!res || !res.token || !res.user) {
+        toast('No se pudo completar el inicio de sesión.', 'error');
+        return;
+      }
+      if (isDev) console.debug('[login] ok', res.user.role);
+      useBackend = true;
+      const role = backendRoleIsAdmin(res.user.role) ? 'ADMIN' : 'CLIENT';
+      const userToStore = { id: res.user.id, email: res.user.email, name: res.user.name, role: res.user.role };
+      try {
+        localStorage.setItem(STORAGE_LOGIN, 'true');
+        localStorage.setItem(STORAGE_USER, JSON.stringify(userToStore));
+        localStorage.setItem(STORAGE_ROLE, role);
+        if (role === 'ADMIN') {
+          adminToken = res.token;
+          clientToken = null;
+          localStorage.setItem(STORAGE_ADMIN_TOKEN, res.token);
+          localStorage.removeItem(STORAGE_CLIENT_TOKEN);
+        } else {
+          clientToken = res.token;
+          adminToken = null;
+          localStorage.setItem(STORAGE_CLIENT_TOKEN, res.token);
+          localStorage.removeItem(STORAGE_ADMIN_TOKEN);
+        }
+      } catch (_) {}
+      setLoggedIn(true, userToStore, role);
+      closeLoginModal();
+      if (form) form.reset();
+      showLoginForm();
+      toast(role === 'ADMIN' ? 'Sesión iniciada como Administrador.' : 'Sesión iniciada. Hola, Cliente.', 'success');
+      if (role === 'ADMIN') {
+        try {
+          PRODUCTS = await loadProducts();
+          renderCatalog(document.getElementById('catalog-grid'));
+          await refreshAdminOrders();
+          await refreshAdminStats();
+          refreshAdminUsers();
+        } catch (_) {
+          PRODUCTS = getProductsSync();
+          renderCatalog(document.getElementById('catalog-grid'));
+        }
+      } else {
+        renderMisPedidos();
+      }
+    };
 
     [btnLogin, btnLoginMobile].forEach(btn => {
-      if (btn) btn.addEventListener('click', openLoginModal);
+      if (btn) btn.addEventListener('click', () => { showLoginForm(); openLoginModal(); });
     });
     const btnLogout = document.getElementById('btn-logout');
     const btnLogoutMobile = document.getElementById('btn-logout-mobile');
     if (btnLogout) btnLogout.addEventListener('click', handleLogout);
     if (btnLogoutMobile) btnLogoutMobile.addEventListener('click', handleLogout);
-    if (closeBtn) closeBtn.addEventListener('click', closeLoginModal);
+    if (closeBtn) closeBtn.addEventListener('click', () => { closeLoginModal(); showLoginForm(); });
+    if (back2FABtn) back2FABtn.addEventListener('click', showLoginForm);
     if (modal) {
       modal.addEventListener('click', function(e) {
-        if (e.target === modal) closeLoginModal();
+        if (e.target === modal) {
+          closeLoginModal();
+          showLoginForm();
+        }
       });
     }
 
@@ -987,51 +1067,44 @@ const App = (function() {
 
         try {
           const res = await window.ProyectWebAPI.login(user, password);
-          if (!res || !res.token || !res.user) {
-            toast('Credenciales inválidas', 'error');
+          if (res && res.requires2FA) {
+            show2FAForm(res.email || user);
+            toast(res.message || 'Se requiere verificación de 2 pasos.', 'info');
             return;
           }
-          if (isDev) console.debug('[login] ok', res.user.role);
-          useBackend = true;
-          const role = backendRoleIsAdmin(res.user.role) ? 'ADMIN' : 'CLIENT';
-          const userToStore = { id: res.user.id, email: res.user.email, name: res.user.name, role: res.user.role };
-          try {
-            localStorage.setItem(STORAGE_LOGIN, 'true');
-            localStorage.setItem(STORAGE_USER, JSON.stringify(userToStore));
-            localStorage.setItem(STORAGE_ROLE, role);
-            if (role === 'ADMIN') {
-              adminToken = res.token;
-              clientToken = null;
-              localStorage.setItem(STORAGE_ADMIN_TOKEN, res.token);
-              localStorage.removeItem(STORAGE_CLIENT_TOKEN);
-            } else {
-              clientToken = res.token;
-              adminToken = null;
-              localStorage.setItem(STORAGE_CLIENT_TOKEN, res.token);
-              localStorage.removeItem(STORAGE_ADMIN_TOKEN);
-            }
-          } catch (_) {}
-          setLoggedIn(true, userToStore, role);
-          closeLoginModal();
-          form.reset();
-          toast(role === 'ADMIN' ? 'Sesión iniciada como Administrador.' : 'Sesión iniciada. Hola, Cliente.', 'success');
-          if (role === 'ADMIN') {
-            try {
-              PRODUCTS = await loadProducts();
-              renderCatalog(document.getElementById('catalog-grid'));
-              await refreshAdminOrders();
-              await refreshAdminStats();
-              refreshAdminUsers();
-            } catch (_) {
-              PRODUCTS = getProductsSync();
-              renderCatalog(document.getElementById('catalog-grid'));
-            }
-          } else {
-            renderMisPedidos();
-          }
+          await completeLogin(res);
         } catch (err) {
           toast((err && err.data && err.data.error) || 'Credenciales inválidas', 'error');
           if (isDev) console.debug('[login] fail', err.status, err.data);
+        }
+      });
+    }
+    if (form2FA) {
+      form2FA.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const code = String(codeInput?.value || '').trim();
+        if (!pending2FAEmail) {
+          toast('Tu sesión 2FA expiró. Inicia sesión de nuevo.', 'error');
+          showLoginForm();
+          return;
+        }
+        if (!/^\d{6}$/.test(code)) {
+          toast('Ingresa un código válido de 6 dígitos.', 'error');
+          return;
+        }
+        if (typeof window.ProyectWebAPI === 'undefined' || !useBackend) {
+          toast('Se necesita conexión al servidor para verificar el código.', 'error');
+          return;
+        }
+        try {
+          const res = await window.ProyectWebAPI.verify2FA(pending2FAEmail, code);
+          await completeLogin(res);
+        } catch (err) {
+          const msg = (err && err.data && err.data.error) || 'Código incorrecto o expirado.';
+          toast(msg, 'error');
+          if (err && err.data && err.data.code === '2FA_EXPIRED') {
+            showLoginForm();
+          }
         }
       });
     }
@@ -2150,6 +2223,7 @@ const App = (function() {
    * Inicialización principal: carga productos (API o local), carrito, UI y mensaje de pago si aplica.
    */
   async function init() {
+    initGlobalUploadsImageFallback();
     cart = getCart();
     const catalogGrid = document.getElementById('catalog-grid');
     if (catalogGrid) renderCatalogSkeleton(catalogGrid);

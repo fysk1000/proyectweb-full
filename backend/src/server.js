@@ -262,6 +262,68 @@ const loginSchema = z.object({
   email: z.string().trim().email().transform(s => s.toLowerCase()),
   password: z.string().min(1, 'La contraseña es obligatoria')
 });
+const verify2FASchema = z.object({
+  email: z.string().trim().email().transform(s => s.toLowerCase()),
+  code: z.string().trim().regex(/^\d{6}$/, 'El código debe tener 6 dígitos')
+});
+const TWO_FA_TTL_MS = 5 * 60 * 1000;
+const pending2FACodes = new Map();
+
+function generate2FACode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function clear2FACode(email) {
+  pending2FACodes.delete(String(email || '').toLowerCase());
+}
+
+function set2FACode(email, code, userId) {
+  const emailLower = String(email || '').toLowerCase();
+  pending2FACodes.set(emailLower, {
+    code: String(code),
+    userId: String(userId || ''),
+    expiresAt: Date.now() + TWO_FA_TTL_MS
+  });
+}
+
+function get2FACode(email) {
+  const emailLower = String(email || '').toLowerCase();
+  const entry = pending2FACodes.get(emailLower);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    pending2FACodes.delete(emailLower);
+    return null;
+  }
+  return entry;
+}
+
+async function send2FACodeEmail(toEmail, code) {
+  const transport = getTransport();
+  if (!transport) {
+    const err = new Error('SMTP no configurado (SMTP_USER/SMTP_PASS)');
+    err.code = 'SMTP_NOT_CONFIGURED';
+    throw err;
+  }
+  const fromAddr = getSmtpFromAddress();
+  if (!fromAddr) {
+    const err = new Error('SMTP_FROM no definido');
+    err.code = 'SMTP_FROM_MISSING';
+    throw err;
+  }
+  await raceWithTimeout(
+    transport.sendMail({
+      from: fromAddr,
+      to: toEmail,
+      subject: 'Tu código de seguridad de 2 pasos',
+      text: `Tu código de verificación es: ${code}\n\nEste código expira en 5 minutos.`,
+      html: `<p>Tu código de verificación es:</p><p style="font-size:24px;font-weight:700;letter-spacing:2px;">${code}</p><p>Este código expira en 5 minutos.</p>`
+    }),
+    SMTP_TIMEOUT_MS,
+    'ETIMEDOUT',
+    'Tiempo de espera al conectar o enviar por SMTP (15 s).'
+  );
+}
+
 app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
   try {
     requireSecret();
@@ -304,6 +366,64 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
       return res.status(403).json({ error: 'Por favor, verifica tu correo antes de iniciar sesión', code: 'EMAIL_NOT_VERIFIED' });
     }
 
+    const code = generate2FACode();
+    set2FACode(user.email, code, user.id);
+    try {
+      await send2FACodeEmail(user.email, code);
+    } catch (mailErr) {
+      clear2FACode(user.email);
+      const mapped = mapMailErrorToHttp(mailErr);
+      return res.status(mapped.status).json({ error: mapped.message, code: mapped.code });
+    }
+
+    return res.status(200).json({
+      requires2FA: true,
+      email: user.email,
+      message: 'Código enviado a tu correo. Ingresa el código para completar el inicio de sesión.'
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.post('/api/auth/verify-2fa', loginRateLimiter, async (req, res) => {
+  try {
+    requireSecret();
+  } catch {
+    return res.status(503).json({ error: 'Servicio no configurado' });
+  }
+  const parsed = verify2FASchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
+  }
+
+  const { email, code } = parsed.data;
+  const pending = get2FACode(email);
+  if (!pending) {
+    return res.status(401).json({ error: 'El código ha expirado. Inicia sesión nuevamente para recibir otro.', code: '2FA_EXPIRED' });
+  }
+  if (pending.code !== String(code)) {
+    return res.status(401).json({ error: 'Código de verificación incorrecto.', code: '2FA_INVALID' });
+  }
+
+  try {
+    const db = await dbPromise;
+    await db.read();
+    const emailLower = String(email || '').toLowerCase();
+    const user = (db.data.users || []).find(u => String(u.email || '').toLowerCase() === emailLower);
+    if (!user || user.id !== pending.userId) {
+      clear2FACode(email);
+      return res.status(401).json({ error: 'No se pudo validar tu sesión. Vuelve a iniciar sesión.' });
+    }
+    if (user.active === false) {
+      clear2FACode(email);
+      return res.status(401).json({ error: 'Cuenta desactivada' });
+    }
+    if (user.isVerified === false) {
+      clear2FACode(email);
+      return res.status(403).json({ error: 'Por favor, verifica tu correo antes de iniciar sesión', code: 'EMAIL_NOT_VERIFIED' });
+    }
+
     const roleNorm = normalizeStoredRole(user.role ?? 'user');
     const token = signToken({
       id: user.id,
@@ -312,6 +432,7 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
       role: roleNorm,
       isVerified: user.isVerified !== false
     });
+    clear2FACode(email);
     return res.status(200).json({
       token,
       user: {
@@ -322,7 +443,7 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
         isVerified: user.isVerified !== false
       }
     });
-  } catch (err) {
+  } catch (_) {
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 });

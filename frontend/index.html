@@ -337,6 +337,15 @@
         <button type="submit" class="btn btn-primary w-full">Entrar</button>
         <p class="text-center text-sm text-slate-600 mt-4">¿No tienes cuenta? <button type="button" id="btn-open-register" class="text-indigo-600 font-medium hover:underline">Registrarse</button></p>
       </form>
+      <form id="login-2fa-form" class="hidden">
+        <p class="text-sm text-slate-600 mb-4">Te enviamos un código de 6 dígitos a tu correo. Ingrésalo para completar el acceso.</p>
+        <div class="mb-4">
+          <label for="login-2fa-code" class="label-field">Código de verificación</label>
+          <input type="text" id="login-2fa-code" name="code" class="input-field" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Verificar código</button>
+        <button type="button" id="login-2fa-back" class="btn btn-secondary w-full mt-3">Volver</button>
+      </form>
     </div>
   </div>
 

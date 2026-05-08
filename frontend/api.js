@@ -61,6 +61,10 @@
       return request('/api/auth/login', { method: 'POST', json: { email, password } });
     },
 
+    verify2FA(email, code) {
+      return request('/api/auth/verify-2fa', { method: 'POST', json: { email, code } });
+    },
+
     getMe(token) {
       return request('/api/auth/me', { token });
     },
