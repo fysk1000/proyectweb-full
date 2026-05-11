@@ -555,11 +555,36 @@ const App = (function() {
 
   // ========== MODAL LOGIN ==========
 
+  function captchaApiIsCrossOrigin() {
+    try {
+      if (typeof window.ProyectWebAPI === 'undefined' || !window.ProyectWebAPI.getBase) return false;
+      const base = String(window.ProyectWebAPI.getBase() || '').trim();
+      if (!base) return false;
+      const resolved = new URL(base, window.location.href);
+      return resolved.origin !== window.location.origin;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function reloadCaptchaImage(imgId) {
+    const img = typeof imgId === 'string' ? document.getElementById(imgId) : imgId;
+    if (!img) return;
+    const base = typeof window.ProyectWebAPI !== 'undefined' && window.ProyectWebAPI.getBase
+      ? String(window.ProyectWebAPI.getBase() || '').replace(/\/$/, '')
+      : '';
+    const url = `${base}/api/auth/captcha?t=${Date.now()}`;
+    if (captchaApiIsCrossOrigin()) img.crossOrigin = 'use-credentials';
+    else img.removeAttribute('crossorigin');
+    img.src = url;
+  }
+
   function openLoginModal() {
     const modal = document.getElementById('login-modal');
     if (modal) {
       modal.classList.remove('hidden');
       modal.setAttribute('aria-hidden', 'false');
+      reloadCaptchaImage('login-captcha-img');
       document.getElementById('login-user')?.focus();
     }
   }
@@ -1040,7 +1065,18 @@ const App = (function() {
     if (btnLogout) btnLogout.addEventListener('click', handleLogout);
     if (btnLogoutMobile) btnLogoutMobile.addEventListener('click', handleLogout);
     if (closeBtn) closeBtn.addEventListener('click', () => { closeLoginModal(); showLoginForm(); });
-    if (back2FABtn) back2FABtn.addEventListener('click', showLoginForm);
+    if (back2FABtn) {
+      back2FABtn.addEventListener('click', () => {
+        showLoginForm();
+        reloadCaptchaImage('login-captcha-img');
+        const capIn = document.getElementById('login-captcha-input');
+        if (capIn) capIn.value = '';
+      });
+    }
+    const loginCaptchaRefresh = document.getElementById('login-captcha-refresh');
+    if (loginCaptchaRefresh) {
+      loginCaptchaRefresh.addEventListener('click', () => reloadCaptchaImage('login-captcha-img'));
+    }
     if (modal) {
       modal.addEventListener('click', function(e) {
         if (e.target === modal) {
@@ -1055,8 +1091,13 @@ const App = (function() {
         e.preventDefault();
         const user = form.querySelector('[name="usuario"]')?.value?.trim();
         const password = form.querySelector('[name="password"]')?.value;
+        const captcha = document.getElementById('login-captcha-input')?.value?.trim() || '';
         if (!user || !password) {
           toast('Introduce usuario y contraseña.', 'error');
+          return;
+        }
+        if (!captcha) {
+          toast('Introduce el código CAPTCHA.', 'error');
           return;
         }
 
@@ -1066,7 +1107,7 @@ const App = (function() {
         }
 
         try {
-          const res = await window.ProyectWebAPI.login(user, password);
+          const res = await window.ProyectWebAPI.login(user, password, captcha);
           if (res && res.requires2FA) {
             show2FAForm(res.email || user);
             toast(res.message || 'Se requiere verificación de 2 pasos.', 'info');
@@ -1076,6 +1117,9 @@ const App = (function() {
         } catch (err) {
           toast((err && err.data && err.data.error) || 'Credenciales inválidas', 'error');
           if (isDev) console.debug('[login] fail', err.status, err.data);
+          reloadCaptchaImage('login-captcha-img');
+          const capIn = document.getElementById('login-captcha-input');
+          if (capIn) capIn.value = '';
         }
       });
     }
@@ -1180,6 +1224,7 @@ const App = (function() {
     if (modal) {
       modal.classList.remove('hidden');
       modal.setAttribute('aria-hidden', 'false');
+      reloadCaptchaImage('register-captcha-img');
       document.getElementById('register-name')?.focus();
     }
   }
@@ -1254,6 +1299,10 @@ const App = (function() {
     if (openLoginBtn) openLoginBtn.addEventListener('click', () => { closeRegisterModal(); openLoginModal(); });
     if (closeBtn) closeBtn.addEventListener('click', closeRegisterModal);
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeRegisterModal(); });
+    const registerCaptchaRefresh = document.getElementById('register-captcha-refresh');
+    if (registerCaptchaRefresh) {
+      registerCaptchaRefresh.addEventListener('click', () => reloadCaptchaImage('register-captcha-img'));
+    }
 
     if (form) {
       form.addEventListener('submit', async function(e) {
@@ -1261,12 +1310,17 @@ const App = (function() {
         const email = form.querySelector('[name="email"]')?.value?.trim();
         const password = form.querySelector('[name="password"]')?.value;
         const nombre = form.querySelector('[name="nombre"]')?.value?.trim();
+        const captcha = document.getElementById('register-captcha-input')?.value?.trim() || '';
         if (!email || !password) {
           toast('Email y contraseña son obligatorios.', 'error');
           return;
         }
         if (password.length < 6) {
           toast('La contraseña debe tener al menos 6 caracteres.', 'error');
+          return;
+        }
+        if (!captcha) {
+          toast('Introduce el código CAPTCHA.', 'error');
           return;
         }
         if (!useBackend || typeof window.ProyectWebAPI === 'undefined') {
@@ -1277,7 +1331,7 @@ const App = (function() {
         const originalText = submitBtn ? submitBtn.textContent : '';
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creando cuenta...'; }
         try {
-          const res = await window.ProyectWebAPI.register(email, password, nombre || '');
+          const res = await window.ProyectWebAPI.register(email, password, nombre || '', captcha);
           const token = res.token;
           const user = res.user;
           if (user && res.message && !token) {
@@ -1306,6 +1360,9 @@ const App = (function() {
         } catch (err) {
           const msg = (err.data && err.data.error) || 'Error al registrarse';
           toast(msg, 'error');
+          reloadCaptchaImage('register-captcha-img');
+          const capIn = document.getElementById('register-captcha-input');
+          if (capIn) capIn.value = '';
         } finally {
           if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
         }

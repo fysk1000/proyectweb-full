@@ -18,6 +18,7 @@ import { signToken, authRequired, isAdmin, isAdministratorRole, optionalBearerAu
 import { createPreference, getPayment } from './mp.js';
 import chatRouter from './routes/chat.js';
 import Stripe from 'stripe';
+import svgCaptcha from 'svg-captcha';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -42,13 +43,17 @@ if (process.env.FRONTEND_URL) {
 
 const corsOptions = {
   origin(origin, callback) {
-    if (corsAllowAll) return callback(null, true);
+    if (corsAllowAll) {
+      if (!origin) return callback(null, true);
+      return callback(null, origin);
+    }
     if (!origin) return callback(null, true);
-    if (corsWhitelist.includes(origin)) return callback(null, true);
+    if (corsWhitelist.includes(origin)) return callback(null, origin);
     callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 };
 
 function nowISO(){ return new Date().toISOString(); }
@@ -165,6 +170,85 @@ async function dbReadWrite(fn){
 
 const isDev = (process.env.NODE_ENV || 'development') !== 'production';
 
+const CAPTCHA_COOKIE = 'pw_cap_sid';
+const CAPTCHA_TTL_MS = 5 * 60 * 1000;
+const captchaChallenges = new Map();
+
+function captchaCookieFlags() {
+  const isProd = (process.env.NODE_ENV || 'development') === 'production';
+  return isProd ? '; Secure' : '';
+}
+
+function parseCookieHeader(cookieHeader, name) {
+  if (!cookieHeader || typeof cookieHeader !== 'string') return '';
+  for (const part of cookieHeader.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    const k = part.slice(0, idx).trim();
+    if (k !== name) continue;
+    try {
+      return decodeURIComponent(part.slice(idx + 1).trim());
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
+function pruneCaptchaStore() {
+  const now = Date.now();
+  for (const [k, v] of captchaChallenges) {
+    if (now > v.expiresAt) captchaChallenges.delete(k);
+  }
+}
+
+/**
+ * Comprueba el CAPTCHA del cuerpo frente al valor en memoria ligado a la cookie.
+ * Siempre elimina el reto del servidor y envía Set-Cookie para borrar la cookie (un solo uso).
+ */
+function validateAndConsumeCaptcha(req, res, userCaptchaRaw) {
+  const sid = parseCookieHeader(req.headers.cookie, CAPTCHA_COOKIE);
+  const clearCookie = `${CAPTCHA_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${captchaCookieFlags()}`;
+  res.append('Set-Cookie', clearCookie);
+
+  if (!sid) return false;
+  const entry = captchaChallenges.get(sid);
+  captchaChallenges.delete(sid);
+  if (!entry || Date.now() > entry.expiresAt) return false;
+
+  const userVal = String(userCaptchaRaw ?? '').trim().toLowerCase();
+  const expected = String(entry.text ?? '').trim().toLowerCase();
+  return Boolean(userVal && expected && userVal === expected);
+}
+
+app.get('/api/auth/captcha', (req, res) => {
+  try {
+    pruneCaptchaStore();
+    const oldSid = parseCookieHeader(req.headers.cookie, CAPTCHA_COOKIE);
+    if (oldSid) captchaChallenges.delete(oldSid);
+    const sid = nanoid(32);
+    const c = svgCaptcha.create({
+      size: 5,
+      noise: 2,
+      color: true,
+      width: 150,
+      height: 50,
+      charPreset: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    });
+    captchaChallenges.set(sid, { text: c.text, expiresAt: Date.now() + CAPTCHA_TTL_MS });
+    const maxAgeSec = Math.floor(CAPTCHA_TTL_MS / 1000);
+    const setCookie = `${CAPTCHA_COOKIE}=${encodeURIComponent(sid)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSec}${captchaCookieFlags()}`;
+    res.setHeader('Set-Cookie', setCookie);
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.type('image/svg+xml');
+    return res.send(c.data);
+  } catch (err) {
+    console.error('[captcha]', err);
+    return res.status(500).json({ error: 'No se pudo generar el CAPTCHA' });
+  }
+});
+
 // ---- Products public (fuente única: data.json vía db) ----
 app.get('/api/products', async (req, res) => {
   const db = await dbPromise;
@@ -199,6 +283,11 @@ app.post('/api/auth/register', async (req, res) => {
   }
   const { email, password, name: nameRaw } = parsed.data;
   const name = (typeof nameRaw === 'string' && nameRaw.trim()) ? nameRaw.trim() : ((email || '').split('@')[0] || email || '');
+
+  const captchaInput = body.captcha ?? body.codigo ?? '';
+  if (!validateAndConsumeCaptcha(req, res, captchaInput)) {
+    return res.status(400).json({ error: 'CAPTCHA incorrecto' });
+  }
 
   try {
     const db = await dbPromise;
@@ -340,6 +429,11 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.issues });
   }
   const { email, password } = parsed.data;
+
+  const captchaInput = body.captcha ?? body.codigo ?? '';
+  if (!validateAndConsumeCaptcha(req, res, captchaInput)) {
+    return res.status(400).json({ error: 'CAPTCHA incorrecto' });
+  }
 
   try {
     const db = await dbPromise;

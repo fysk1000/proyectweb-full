@@ -16,7 +16,7 @@
     return DEFAULT_BASE;
   }
 
-  async function request(path, { method='GET', token=null, json=null, form=null, signal=null } = {}){
+  async function request(path, { method='GET', token=null, json=null, form=null, signal=null, credentials='omit' } = {}){
     const base = getBase();
     const url = base + path;
     const headers = {};
@@ -31,7 +31,7 @@
       body = form;
     }
 
-    const res = await fetch(url, { method, headers, body, credentials: 'omit', signal: signal || undefined });
+    const res = await fetch(url, { method, headers, body, credentials, signal: signal || undefined });
     const text = await res.text();
     let data;
     try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
@@ -53,12 +53,20 @@
       return request('/api/products');
     },
 
-    register(email, password, name) {
-      return request('/api/auth/register', { method: 'POST', json: { email, password, name: name || '' } });
+    register(email, password, name, captcha) {
+      return request('/api/auth/register', {
+        method: 'POST',
+        json: { email, password, name: name || '', captcha: captcha != null ? String(captcha) : '' },
+        credentials: 'include'
+      });
     },
 
-    login(email, password) {
-      return request('/api/auth/login', { method: 'POST', json: { email, password } });
+    login(email, password, captcha) {
+      return request('/api/auth/login', {
+        method: 'POST',
+        json: { email, password, captcha: captcha != null ? String(captcha) : '' },
+        credentials: 'include'
+      });
     },
 
     verify2FA(email, code) {
