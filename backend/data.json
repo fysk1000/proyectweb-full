@@ -65,7 +65,7 @@
       "description": "Sonido envolvente y cancelación de ruido. Hasta 20h de batería.",
       "price_cents": 4999,
       "stock": 10,
-      "image_url": "http://localhost:5050/uploads/1772097593559-v3kwCIDx.jpg",
+      "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop",
       "active": true,
       "created_at": "2026-02-26T05:45:51.729Z",
       "updated_at": "2026-02-26T09:19:53.576Z"
@@ -87,7 +87,7 @@
       "description": "iPhone 17 Pro Max de 256 gb nuevo y sellado",
       "price_cents": 4899999,
       "stock": 9,
-      "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg",
+      "image_url": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop",
       "active": true,
       "created_at": "2026-02-26T09:06:30.210Z",
       "updated_at": "2026-02-26T09:18:59.406Z"
@@ -98,7 +98,7 @@
       "description": "Xbox Series X nuevo y sellado de 1TB sin juegos",
       "price_cents": 999999,
       "stock": 10,
-      "image_url": "http://localhost:5050/uploads/1772099352963-LB1z6Cmw.jpg",
+      "image_url": "https://images.unsplash.com/photo-1621259182970-54a6021d75bb?w=400&h=300&fit=crop",
       "active": true,
       "created_at": "2026-02-26T09:49:12.983Z",
       "updated_at": "2026-02-26T09:49:12.983Z"
@@ -109,7 +109,7 @@
       "description": "playstation 5 nueva y sellada de 1tb",
       "price_cents": 899999,
       "stock": 10,
-      "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg",
+      "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop",
       "active": true,
       "created_at": "2026-02-26T10:06:11.142Z",
       "updated_at": "2026-02-26T10:07:13.989Z"
@@ -120,7 +120,7 @@
       "description": "pantalla hisense de 100 pulgadas nueva y sellada",
       "price_cents": 1399999,
       "stock": 5,
-      "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg",
+      "image_url": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop",
       "active": false,
       "created_at": "2026-02-26T10:26:48.195Z",
       "updated_at": "2026-02-26T18:34:42.129Z"
@@ -131,7 +131,7 @@
       "description": "pantalla",
       "price_cents": 2299900,
       "stock": 10,
-      "image_url": "http://localhost:5050/uploads/1772127800301-mXzjxd77.jpg",
+      "image_url": "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=400&h=300&fit=crop",
       "active": false,
       "created_at": "2026-02-26T17:43:20.333Z",
       "updated_at": "2026-02-26T17:43:50.568Z"
@@ -142,7 +142,7 @@
       "description": "ppppppooooo",
       "price_cents": 999900,
       "stock": 1,
-      "image_url": "http://localhost:5050/uploads/1772130694911-gSZztND4.jpg",
+      "image_url": "https://images.unsplash.com/photo-1461158530369-5aaf11cc0007?w=400&h=300&fit=crop",
       "active": false,
       "created_at": "2026-02-26T18:31:34.937Z",
       "updated_at": "2026-02-26T18:34:13.907Z"
@@ -153,7 +153,7 @@
       "description": "MacBook Neo Color Negro de 1TB",
       "price_cents": 1499900,
       "stock": 10,
-      "image_url": "http://localhost:5050/uploads/1772915725814-vnuljDSn.jpg",
+      "image_url": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop",
       "active": true,
       "created_at": "2026-03-07T20:35:25.851Z",
       "updated_at": "2026-03-07T20:35:25.851Z"
@@ -175,7 +175,7 @@
           "name": "iPhone 17 Pro Max Naranja Cosmico",
           "price_cents": 4899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+          "image_url": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -204,7 +204,7 @@
           "name": "iPhone 17 Pro Max Naranja Cosmico",
           "price_cents": 4899999,
           "qty": 2,
-          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+          "image_url": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -233,7 +233,7 @@
           "name": "iPhone 17 Pro Max Naranja Cosmico",
           "price_cents": 4899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+          "image_url": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -262,7 +262,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -291,7 +291,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -321,7 +321,7 @@
           "name": "Pantalla Hisense 100 pulgadas",
           "price_cents": 1399999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+          "image_url": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -351,7 +351,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -381,7 +381,7 @@
           "name": "Pantalla Hisense 100 pulgadas",
           "price_cents": 1399999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+          "image_url": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -411,7 +411,7 @@
           "name": "Pantalla Hisense 100 pulgadas",
           "price_cents": 1399999,
           "qty": 2,
-          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+          "image_url": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -441,7 +441,7 @@
           "name": "Pantalla Hisense 100 pulgadas",
           "price_cents": 1399999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+          "image_url": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -475,14 +475,14 @@
           "name": "Xbox Series X",
           "price_cents": 999999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772099352963-LB1z6Cmw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1621259182970-54a6021d75bb?w=400&h=300&fit=crop"
         },
         {
           "product_id": "ilXX7V_quDyNq21oTzn8m",
           "name": "Pantalla Hisense 100 pulgadas",
           "price_cents": 1399999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772101608113-vCY86OCQ.jpg"
+          "image_url": "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -512,7 +512,7 @@
           "name": "Xbox Series X",
           "price_cents": 999999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772099352963-LB1z6Cmw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1621259182970-54a6021d75bb?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -543,7 +543,7 @@
           "name": "MacBook Neo",
           "price_cents": 1499900,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772915725814-vnuljDSn.jpg"
+          "image_url": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -580,7 +580,7 @@
           "name": "iPhone 17 Pro Max Naranja Cosmico",
           "price_cents": 4899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+          "image_url": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -617,7 +617,7 @@
           "name": "MacBook Neo",
           "price_cents": 1499900,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772915725814-vnuljDSn.jpg"
+          "image_url": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -650,7 +650,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -683,7 +683,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -716,7 +716,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -749,7 +749,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -782,14 +782,14 @@
           "name": "iPhone 17 Pro Max Naranja Cosmico",
           "price_cents": 4899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772096790190-njO5gHhY.jpg"
+          "image_url": "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop"
         },
         {
           "product_id": "dOKBeVGZ1gSZ1Bg1gH_Pu",
           "name": "Auriculares inalámbricos",
           "price_cents": 4999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772097593559-v3kwCIDx.jpg"
+          "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -822,7 +822,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -855,7 +855,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -888,7 +888,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 2,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -921,7 +921,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -954,7 +954,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
@@ -987,7 +987,7 @@
           "name": "Playstation 5",
           "price_cents": 899999,
           "qty": 1,
-          "image_url": "http://localhost:5050/uploads/1772100433965-hETe_Ouw.jpg"
+          "image_url": "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&h=300&fit=crop"
         }
       ],
       "address_json": {
