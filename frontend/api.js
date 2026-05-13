@@ -7,13 +7,30 @@
   /** Vacío = mismo origen (recomendado en Render u otro despliegue unificado). */
   const DEFAULT_BASE = '';
 
+  /**
+   * Si el HTML se abre desde otro origen que el backend (Live Server, Vite, file://),
+   * sin API_BASE ni localStorage, asumimos API en localhost:5050 (puerto del server.js).
+   */
+  function inferLocalApiBase() {
+    try {
+      if (typeof window === 'undefined') return '';
+      const loc = window.location;
+      if (loc.protocol === 'file:') return 'http://localhost:5050';
+      const h = String(loc.hostname || '');
+      const p = String(loc.port || '');
+      const isLocal = h === 'localhost' || h === '127.0.0.1';
+      if (isLocal && p && p !== '5050') return 'http://localhost:5050';
+    } catch (_) {}
+    return '';
+  }
+
   function getBase(){
     try {
       if (window.__ENV__ && window.__ENV__.API_BASE) return String(window.__ENV__.API_BASE).replace(/\/$/, '');
       const ls = localStorage.getItem('proyectweb_api_base');
       if (ls) return String(ls).replace(/\/$/, '');
     } catch(_) {}
-    return DEFAULT_BASE;
+    return inferLocalApiBase() || DEFAULT_BASE;
   }
 
   async function request(path, { method='GET', token=null, json=null, form=null, signal=null, credentials='omit' } = {}){

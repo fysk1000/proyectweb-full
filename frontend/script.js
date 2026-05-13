@@ -65,7 +65,7 @@ const App = (function() {
       return getUploadsBaseUrl() + fileName;
     }
     if (/^https?:\/\//i.test(value)) return value;
-    if (value.startsWith('/uploads/')) return value;
+    if (value.startsWith('/uploads/')) return getUploadsBaseUrl() + value.slice('/uploads/'.length);
     if (value.startsWith('/')) return value;
     return getUploadsBaseUrl() + encodeURIComponent(value);
   }
